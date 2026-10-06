@@ -217,17 +217,19 @@ class zxtouch:
 
         return True, {"x": result[1][0], "y": result[1][1], "width": result[1][2], "height": result[1][3]}
 
-    def show_toast(self, toast_type, content, duration, position=0, fontSize=0):
+    def show_toast(self, toast_type, content, duration, position=0, fontSize=0, x=-1, y=-1):
         """Show toast on ios device
 
         :param type: type of the toast.
         :param content: content of the toast
         :param duration: duration of the toast
-        :param position: position of the toast. 0 for top, 1 for bottom
+        :param position: 0 for top, 1 for bottom. Ignored when y is set.
+        :param x: left edge in screen pixels. -1 keeps the toast centered.
+        :param y: top edge in screen pixels. -1 uses position.
         :return: Result tuple: (success?, error_message/return value)
         """
         self.s.send(datahandler.format_socket_data(tasktypes.TASK_SHOW_TOAST, toast_type, content, duration, position,
-                                                   fontSize))
+                                                   fontSize, x, y))
         return self._recv_response()
 
     def pick_color(self, x, y):

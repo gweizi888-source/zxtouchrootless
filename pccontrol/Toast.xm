@@ -20,6 +20,8 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
         int duration = [data[2] intValue];
         int position = 0;
         int fontSize = 0;
+        int customX = -1;
+        int customY = -1;
         if ([data count] >= 4)
         {
             position = [data[3] intValue];
@@ -27,6 +29,14 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
         if ([data count] >= 5)
         {
             fontSize = [data[4] intValue];
+        }
+        if ([data count] >= 6)
+        {
+            customX = [data[5] intValue];
+        }
+        if ([data count] >= 7)
+        {
+            customY = [data[6] intValue];
         }
 
         if (type > 4 || type < 0)
@@ -43,7 +53,7 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
             if (type == 0)
                 [Toast hideToast];
             else
-                [Toast showToastWithContent:data[1] type:type duration:duration position:position fontSize:fontSize];
+                [Toast showToastWithContent:data[1] type:type duration:duration position:position fontSize:fontSize x:customX y:customY];
         });
     }
 }
@@ -66,7 +76,7 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
     });
 }
 
-+ (void) showToastWithContent:(NSString*)content type:(int)type duration:(float)duration position:(int)position fontSize:(int)afontSize // positon: 0 top 1 bottom 2 left(not supported) 3 right (ns)
++ (void) showToastWithContent:(NSString*)content type:(int)type duration:(float)duration position:(int)position fontSize:(int)afontSize x:(int)customX y:(int)customY // position: 0 top, 1 bottom. customX/customY are pixels; -1 keeps the old placement.
 {
     __block UIWindow* currentWindow = NULL;
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -117,7 +127,16 @@ void showToastFromRawData(UInt8 *eventData, NSError **error)
             windowLeftTopCornerY = (int)((screenHeight - contentSize.height - 50)/scale);
         }
 
-        if (@available(iOS 11.0, *)) {
+        if (customY >= 0)
+        {
+            CGFloat pointScale = scale > 0 ? scale : 1;
+            if (customX >= 0)
+            {
+                windowLeftTopCornerX = (int)(customX / pointScale);
+            }
+            windowLeftTopCornerY = (int)(customY / pointScale);
+        }
+        else if (@available(iOS 11.0, *)) {
             UIWindowScene *scene = (UIWindowScene *)[[UIApplication sharedApplication].connectedScenes anyObject];
             UIWindow *anyWindow = scene.windows.firstObject;
             CGFloat bottomPadding = anyWindow ? anyWindow.safeAreaInsets.bottom : 0;
