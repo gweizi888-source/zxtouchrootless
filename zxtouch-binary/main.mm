@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import "../pccontrol/TextRecognization/VKOcrManager.h"
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -20,6 +21,7 @@ static int call_system(const char *cmd) {
 
 int executeCommand();
 int playBackFromRawFile();
+__attribute__((noreturn)) void performOCR(NSString *configPath);
 
 int getSpringboardSocket() {
     int sock = 0, valread;
@@ -52,6 +54,7 @@ int getSpringboardSocket() {
 
 
 int main(int argc, char *argv[], char *envp[]) {
+    @autoreleasepool {
     if (argc < 2)
     {
         NSLog(@"com.zjx.zxtouchb: usage: zxtouchd task [...]");
@@ -70,6 +73,15 @@ int main(int argc, char *argv[], char *envp[]) {
     else if (equal(argv[1], "-pr")) // play back from raw file
     {
         playBackFromRawFile();
+    }
+    else if (equal(argv[1], "-ocr"))
+    {
+        if (argc < 3)
+        {
+            NSLog(@"com.zjx.zxtouchb: please specify the OCR config path.");
+            return 2;
+        }
+        performOCR([NSString stringWithUTF8String:argv[2]]);
     }
     else
     {
@@ -106,6 +118,69 @@ int main(int argc, char *argv[], char *envp[]) {
      */
 
     return 0;
+    }
+}
+
+__attribute__((noreturn)) void performOCR(NSString *configPath)
+{
+    NSDictionary *config = [NSDictionary dictionaryWithContentsOfFile:configPath];
+    NSString *outputPath = config[@"outputPath"];
+    if (!config || !outputPath)
+    {
+        _exit(2);
+    }
+
+    NSArray *rectData = config[@"rect"];
+    if (![rectData isKindOfClass:[NSArray class]] || rectData.count != 4)
+    {
+        [@{@"error": @"Invalid OCR rectangle."} writeToFile:outputPath atomically:YES];
+        _exit(2);
+    }
+
+    CGRect rect = CGRectMake([rectData[0] doubleValue],
+                             [rectData[1] doubleValue],
+                             [rectData[2] doubleValue],
+                             [rectData[3] doubleValue]);
+    VKOcrManager *manager = [[VKOcrManager alloc]
+        initWithImagePath:config[@"imagePath"]
+        area:rect
+        orientation:[config[@"orientation"] intValue]];
+
+    NSArray *customWords = config[@"customWords"];
+    if (customWords.count > 0)
+    {
+        [manager setCustomWords:customWords];
+    }
+    [manager setMinimumHeight:[config[@"minimumHeight"] floatValue]];
+    [manager setRecognitionLevel:[config[@"level"] intValue] == 1
+        ? VNRequestTextRecognitionLevelFast
+        : VNRequestTextRecognitionLevelAccurate];
+
+    NSArray *languages = config[@"languages"];
+    if (languages.count > 0)
+    {
+        [manager setLanguages:languages];
+    }
+    [manager setCorrection:[config[@"correct"] boolValue]];
+
+    NSError *error = nil;
+    NSString *result = [manager recognize:&error];
+    NSString *debugPath = config[@"debugPath"];
+    if (result && debugPath.length > 0)
+    {
+        [manager outputDebugImage:debugPath error:&error];
+    }
+
+    NSDictionary *response = result
+        ? @{@"result": result}
+        : @{@"error": error.localizedDescription ?: @"OCR failed."};
+    [response writeToFile:outputPath atomically:YES];
+
+    // Vision revision 2 can trap while destroying its ANE model on iOS 16.
+    // This helper handles one request per process.  Exit without draining ARC
+    // objects after the result is durable so that a Vision cleanup bug can
+    // never crash SpringBoard.
+    _exit(result ? 0 : 3);
 }
 
 int executeCommand()

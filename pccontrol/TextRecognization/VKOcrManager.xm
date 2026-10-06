@@ -1,5 +1,4 @@
 #import "VKOcrManager.h"
-#import "../Screen.h"
 #include "../Common.h"
 
 
@@ -204,10 +203,6 @@ Return area that contain text
 
 
 -(UIImage *)drawDebugOutputfromArray:(NSArray<VNRecognizedTextObservation*>*)arr error:(NSError**)error{
-    // reformat rect (don't know why there is size differnt here)
-    CGFloat scale = [Screen getScale];
-    CGRect screenBounds = [Screen getBounds];
-
     UIImage* image = [[UIImage alloc] initWithCIImage:img];
     
     CGFloat imageAbsoluteWidth = image.size.width;

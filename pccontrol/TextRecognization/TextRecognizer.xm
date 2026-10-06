@@ -1,5 +1,5 @@
 #include "TextRecognizer.h"
-#import "VKOcrManager.h"
+#import <Vision/Vision.h>
 #import "../Screen.h"
 #include "../Common.h"
 #include "../AlertBox.h"
@@ -69,39 +69,82 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
         // parse languages part
         NSArray *languages = [languagesData componentsSeparatedByString:@",,"];
 
-        // screen shot
+        // Run Vision in a short-lived helper process.  On some iOS 16 devices
+        // Vision revision 2 traps while releasing its ANE model; doing OCR in
+        // SpringBoard would put the device into safe mode.
         CGImageRef screenshot = [Screen createScreenShotCGImageRef];
-
         int orientation = [Screen getScreenOrientation];
-
-        // init
-        VKOcrManager* ocrManager = [[VKOcrManager alloc] initWithCGImage:screenshot area:recognizeRect orientation:orientation];
-
-        // set properties
-        if ([customWords count] > 1 || ![customWords[0] isEqualToString:@""])
+        if (!screenshot)
         {
-            NSLog(@"com.zjx.springboard: custom words set. Count: %d", [customWords count]);
-            [ocrManager setCustomWords:customWords];
-        }
-        [ocrManager setMinimumHeight:minimumHeight];
-        [ocrManager setRecognitionLevel:level];
-        if ([languages count] > 1 || ![languages[0] isEqualToString:@""])
-        {
-            NSLog(@"com.zjx.springboard: languages set.");
-            [ocrManager setLanguages:languages];
-        }
-        [ocrManager setCorrection:correct];
-
-        NSString* result = [ocrManager recognize:error];
-
-        if (debugPath && ![debugPath isEqualToString:@""])
-        {
-            [ocrManager outputDebugImage:debugPath error:error];
+            *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to capture screen for OCR.\r\n"}];
+            return nil;
         }
 
+        NSString *workDirectory = [getDocumentRoot() stringByAppendingPathComponent:@"ocr"];
+        [[NSFileManager defaultManager] createDirectoryAtPath:workDirectory
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:nil];
+        NSString *identifier = [[NSUUID UUID] UUIDString];
+        NSString *imagePath = [workDirectory stringByAppendingPathComponent:
+            [identifier stringByAppendingString:@".jpg"]];
+        NSString *configPath = [workDirectory stringByAppendingPathComponent:
+            [identifier stringByAppendingString:@".plist"]];
+        NSString *outputPath = [workDirectory stringByAppendingPathComponent:
+            [identifier stringByAppendingString:@".result.plist"]];
+
+        NSData *imageData = UIImageJPEGRepresentation(
+            [UIImage imageWithCGImage:screenshot], 0.95);
         CFRelease(screenshot);
-        
-        return result;
+        if (![imageData writeToFile:imagePath atomically:YES])
+        {
+            *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to save screen for isolated OCR.\r\n"}];
+            return nil;
+        }
+
+        NSArray *safeCustomWords = ([customWords count] > 1 || ![customWords[0] isEqualToString:@""])
+            ? customWords : @[];
+        NSArray *safeLanguages = ([languages count] > 1 || ![languages[0] isEqualToString:@""])
+            ? languages : @[];
+        NSDictionary *config = @{
+            @"imagePath": imagePath,
+            @"outputPath": outputPath,
+            @"rect": @[@(recognizeRect.origin.x), @(recognizeRect.origin.y),
+                       @(recognizeRect.size.width), @(recognizeRect.size.height)],
+            @"orientation": @(orientation),
+            @"customWords": safeCustomWords,
+            @"minimumHeight": @(minimumHeight),
+            @"level": @(levelData),
+            @"languages": safeLanguages,
+            @"correct": @(correct),
+            @"debugPath": debugPath ?: @""
+        };
+        [config writeToFile:configPath atomically:YES];
+
+        NSString *helperPath = jbroot(@"/usr/bin/zxtouchb");
+        NSString *command = [NSString stringWithFormat:@"'%@' -ocr '%@'", helperPath, configPath];
+        int exitCode = system2([command UTF8String], NULL, NULL);
+        NSDictionary *response = [NSDictionary dictionaryWithContentsOfFile:outputPath];
+
+        [[NSFileManager defaultManager] removeItemAtPath:imagePath error:nil];
+        [[NSFileManager defaultManager] removeItemAtPath:configPath error:nil];
+        [[NSFileManager defaultManager] removeItemAtPath:outputPath error:nil];
+
+        NSString *result = response[@"result"];
+        if (result)
+        {
+            return result;
+        }
+
+        NSString *message = response[@"error"];
+        if (!message)
+        {
+            message = [NSString stringWithFormat:@"OCR helper exited with code %d.", exitCode];
+        }
+        *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999
+            userInfo:@{NSLocalizedDescriptionKey:
+                [NSString stringWithFormat:@"-1;;%@\r\n", message]}];
+        return nil;
     }
     else if (task == TASK_GET_SUPPORTED_LANGUAGE_LIST)
     {
