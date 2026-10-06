@@ -81,7 +81,11 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
             return nil;
         }
 
-        NSString *workDirectory = [getDocumentRoot() stringByAppendingPathComponent:@"ocr"];
+        // SpringBoard and standalone tools see different /var/mobile roots on
+        // RootHide.  Use the resolved jailbreak path in both the config and
+        // command arguments so the helper can open the same files we write.
+        NSString *workDirectory = [jbroot(@"/var/mobile/Library/ZXTouch")
+            stringByAppendingPathComponent:@"ocr"];
         [[NSFileManager defaultManager] createDirectoryAtPath:workDirectory
                                   withIntermediateDirectories:YES
                                                    attributes:nil
