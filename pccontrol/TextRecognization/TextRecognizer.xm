@@ -1,4 +1,5 @@
 #include "TextRecognizer.h"
+#include <roothide.h>
 #import <Vision/Vision.h>
 #import "../Screen.h"
 #include "../Common.h"
