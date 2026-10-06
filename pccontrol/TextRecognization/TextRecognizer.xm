@@ -111,11 +111,33 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
             ? customWords : @[];
         NSArray *safeLanguages = ([languages count] > 1 || ![languages[0] isEqualToString:@""])
             ? languages : @[];
+
+        // Accurate OCR of a tall region fails with "Error computing NN outputs"
+        // on iPhone 13.  Split it into overlapping bands, but recognize all of
+        // them in one helper launch from one screenshot.
+        NSMutableArray *rects = [NSMutableArray array];
+        CGFloat band = 640;
+        CGFloat step = 560;
+        if (recognizeRect.size.height > band)
+        {
+            for (CGFloat offset = 0; offset < recognizeRect.size.height; offset += step)
+            {
+                CGFloat piece = MIN(band, recognizeRect.size.height - offset);
+                [rects addObject:@[@(recognizeRect.origin.x), @(recognizeRect.origin.y + offset),
+                                   @(recognizeRect.size.width), @(piece)]];
+            }
+        }
+        else
+        {
+            [rects addObject:@[@(recognizeRect.origin.x), @(recognizeRect.origin.y),
+                               @(recognizeRect.size.width), @(recognizeRect.size.height)]];
+        }
+
         NSDictionary *config = @{
             @"imagePath": imagePath,
             @"outputPath": outputPath,
-            @"rect": @[@(recognizeRect.origin.x), @(recognizeRect.origin.y),
-                       @(recognizeRect.size.width), @(recognizeRect.size.height)],
+            @"rect": rects[0],
+            @"rects": rects,
             @"orientation": @(orientation),
             @"customWords": safeCustomWords,
             @"minimumHeight": @(minimumHeight),

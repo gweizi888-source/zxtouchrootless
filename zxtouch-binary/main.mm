@@ -130,46 +130,101 @@ __attribute__((noreturn)) void performOCR(NSString *configPath)
         _exit(2);
     }
 
-    NSArray *rectData = config[@"rect"];
-    if (![rectData isKindOfClass:[NSArray class]] || rectData.count != 4)
+    NSArray *rects = config[@"rects"];
+    if (![rects isKindOfClass:[NSArray class]] || rects.count == 0)
+    {
+        rects = config[@"rect"] ? @[config[@"rect"]] : @[];
+    }
+    for (NSArray *rectData in rects)
+    {
+        if (![rectData isKindOfClass:[NSArray class]] || rectData.count != 4)
+        {
+            [@{@"error": @"Invalid OCR rectangle."} writeToFile:outputPath atomically:YES];
+            _exit(2);
+        }
+    }
+    if (rects.count == 0)
     {
         [@{@"error": @"Invalid OCR rectangle."} writeToFile:outputPath atomically:YES];
         _exit(2);
     }
 
-    CGRect rect = CGRectMake([rectData[0] doubleValue],
-                             [rectData[1] doubleValue],
-                             [rectData[2] doubleValue],
-                             [rectData[3] doubleValue]);
-    VKOcrManager *manager = [[VKOcrManager alloc]
-        initWithImagePath:config[@"imagePath"]
-        area:rect
-        orientation:[config[@"orientation"] intValue]];
+    CIImage *image = [CIImage imageWithContentsOfURL:[NSURL fileURLWithPath:config[@"imagePath"]]];
+    if (!image)
+    {
+        [@{@"error": @"Unable to open OCR image."} writeToFile:outputPath atomically:YES];
+        _exit(2);
+    }
 
     NSArray *customWords = config[@"customWords"];
-    if (customWords.count > 0)
-    {
-        [manager setCustomWords:customWords];
-    }
-    [manager setMinimumHeight:[config[@"minimumHeight"] floatValue]];
-    [manager setRecognitionLevel:[config[@"level"] intValue] == 1
-        ? VNRequestTextRecognitionLevelFast
-        : VNRequestTextRecognitionLevelAccurate];
-
     NSArray *languages = config[@"languages"];
-    if (languages.count > 0)
-    {
-        [manager setLanguages:languages];
-    }
-    [manager setCorrection:[config[@"correct"] boolValue]];
-
-    NSError *error = nil;
-    NSString *result = [manager recognize:&error];
     NSString *debugPath = config[@"debugPath"];
-    if (result && debugPath.length > 0)
+    NSMutableArray<NSString *> *lines = [NSMutableArray array];
+    NSMutableSet<NSString *> *seen = [NSMutableSet set];
+    NSError *error = nil;
+    BOOL anySuccess = NO;
+
+    for (NSArray *rectData in rects)
     {
-        [manager outputDebugImage:debugPath error:&error];
+        CGRect rect = CGRectMake([rectData[0] doubleValue],
+                                 [rectData[1] doubleValue],
+                                 [rectData[2] doubleValue],
+                                 [rectData[3] doubleValue]);
+        VKOcrManager *manager = [[VKOcrManager alloc]
+            initWithCIImage:image
+            area:rect
+            orientation:[config[@"orientation"] intValue]];
+        if (customWords.count > 0)
+        {
+            [manager setCustomWords:customWords];
+        }
+        [manager setMinimumHeight:[config[@"minimumHeight"] floatValue]];
+        [manager setRecognitionLevel:[config[@"level"] intValue] == 1
+            ? VNRequestTextRecognitionLevelFast
+            : VNRequestTextRecognitionLevelAccurate];
+        if (languages.count > 0)
+        {
+            [manager setLanguages:languages];
+        }
+        [manager setCorrection:[config[@"correct"] boolValue]];
+
+        NSError *bandError = nil;
+        NSString *bandResult = [manager recognize:&bandError];
+        if (!bandResult)
+        {
+            error = bandError;
+            continue;
+        }
+        anySuccess = YES;
+        if (rects.count == 1 && debugPath.length > 0)
+        {
+            [manager outputDebugImage:debugPath error:&bandError];
+        }
+        if (bandResult.length == 0)
+        {
+            continue;
+        }
+
+        // Bands overlap, so the same line can come back twice.
+        for (NSString *line in [bandResult componentsSeparatedByString:@";;"])
+        {
+            NSArray *parts = [line componentsSeparatedByString:@",,"];
+            NSString *key = line;
+            if (parts.count >= 5)
+            {
+                key = [NSString stringWithFormat:@"%@|%d|%d", parts[0],
+                    [parts[1] intValue] / 12, [parts[2] intValue] / 12];
+            }
+            if ([seen containsObject:key])
+            {
+                continue;
+            }
+            [seen addObject:key];
+            [lines addObject:line];
+        }
     }
+
+    NSString *result = anySuccess ? [lines componentsJoinedByString:@";;"] : nil;
 
     NSDictionary *response = result
         ? @{@"result": result}
