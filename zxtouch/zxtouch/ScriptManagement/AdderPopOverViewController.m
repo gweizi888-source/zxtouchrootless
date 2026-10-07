@@ -8,7 +8,10 @@
 #import "AdderPopOverViewController.h"
 #import "Util.h"
 #import <MobileCoreServices/MobileCoreServices.h>
+#import <objc/runtime.h>
 #import <zlib.h>
+
+static const void *kZipImporterKey = &kZipImporterKey;
 
 @interface AdderPopOverViewController ()
 
@@ -18,7 +21,6 @@
 {
     NSString *currentFolder;
     ScriptListViewController *upperLevel;
-    BOOL pickingZip;
 }
 
 
@@ -28,7 +30,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.preferredContentSize = CGSizeMake(300, 250);
+    self.preferredContentSize = CGSizeMake(300, 150);
     // Do any additional setup after loading the view from its nib.
 }
 
@@ -199,38 +201,48 @@
     return candidate;
 }
 
+- (UIViewController *)importPresenter {
+    return self->upperLevel ?: self.presentingViewController ?: self;
+}
+
+- (void)releaseZipImporter {
+    UIViewController *presenter = [self importPresenter];
+    if (presenter) {
+        objc_setAssociatedObject(presenter, kZipImporterKey, nil, OBJC_ASSOCIATION_ASSIGN);
+    }
+}
+
 - (void)finishImportWithError:(NSError *)err destination:(NSString *)destinationPath {
     dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *presenter = [self importPresenter];
+        [self releaseZipImporter];
         if (err) {
-            [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"Import failed: %@", err.localizedDescription] buttonString:@"OK"];
+            [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"Import failed: %@", err.localizedDescription] buttonString:@"OK"];
             return;
         }
 
         [self->upperLevel refreshTable];
-        [Util showAlertBoxWithOneOption:self title:@"Imported" message:[NSString stringWithFormat:@"%@ was added.", [destinationPath lastPathComponent]] buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:presenter title:@"Imported" message:[NSString stringWithFormat:@"%@ was added.", [destinationPath lastPathComponent]] buttonString:@"OK"];
     });
 }
 
-- (void)presentDocumentPickerForZip:(BOOL)zipOnly {
+- (IBAction)importZipButtonClick:(id)sender {
     if (!self->currentFolder) {
         [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
         return;
     }
 
-    self->pickingZip = zipOnly;
-    NSArray *types = zipOnly ? @[@"public.zip-archive", @"com.pkware.zip-archive"] : @[(NSString *)kUTTypeItem];
-    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:types inMode:UIDocumentPickerModeImport];
-    picker.delegate = self;
-    picker.modalPresentationStyle = UIModalPresentationFormSheet;
-    [self presentViewController:picker animated:YES completion:nil];
-}
-
-- (IBAction)importFileButtonClick:(id)sender {
-    [self presentDocumentPickerForZip:NO];
-}
-
-- (IBAction)importZipButtonClick:(id)sender {
-    [self presentDocumentPickerForZip:YES];
+    UIViewController *presenter = [self importPresenter];
+    objc_setAssociatedObject(presenter, kZipImporterKey, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [self dismissViewControllerAnimated:YES completion:^{
+        // Zip-only types make the system document browser fail with
+        // "There was a problem displaying the document". Ask for any file,
+        // then only accept .zip. Present from the script list, not this popover.
+        UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[(NSString *)kUTTypeData, (NSString *)kUTTypeItem] inMode:UIDocumentPickerModeImport];
+        picker.delegate = self;
+        picker.modalPresentationStyle = UIModalPresentationFullScreen;
+        [presenter presentViewController:picker animated:YES completion:nil];
+    }];
 }
 
 - (IBAction)importImageButtonClick:(id)sender {
@@ -465,18 +477,13 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
     }
 
     BOOL didAccess = [url startAccessingSecurityScopedResource];
-    BOOL zipOnly = self->pickingZip;
-    self->pickingZip = NO;
     NSString *extension = url.pathExtension.lowercaseString;
     NSError *err = nil;
     NSString *destinationPath = nil;
-    if (zipOnly && ![extension isEqualToString:@"zip"]) {
+    if (![extension isEqualToString:@"zip"]) {
         err = zipError(@"Please choose a .zip file.");
-    } else if ([extension isEqualToString:@"zip"]) {
-        destinationPath = [self importZipAtURL:url error:&err];
     } else {
-        destinationPath = [self availableDestinationPathForFileName:url.lastPathComponent];
-        [[NSFileManager defaultManager] copyItemAtURL:url toURL:[NSURL fileURLWithPath:destinationPath] error:&err];
+        destinationPath = [self importZipAtURL:url error:&err];
     }
     if (didAccess) {
         [url stopAccessingSecurityScopedResource];
@@ -487,6 +494,10 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentAtURL:(NSURL *)url {
     [self documentPicker:controller didPickDocumentsAtURLs:@[url]];
+}
+
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
+    [self releaseZipImporter];
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info {
