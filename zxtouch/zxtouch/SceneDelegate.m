@@ -7,6 +7,7 @@
 
 #import "SceneDelegate.h"
 #import "Config.h"
+#import "ScriptManagement/AdderPopOverViewController.h"
 
 @interface SceneDelegate ()
 
@@ -39,6 +40,22 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         self.window.overrideUserInterfaceStyle = style;
     });
+    if (connectionOptions.URLContexts.count) {
+        [self importZipURLs:connectionOptions.URLContexts];
+    }
+}
+
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
+    [self importZipURLs:URLContexts];
+}
+
+- (void)importZipURLs:(NSSet<UIOpenURLContext *> *)URLContexts {
+    for (UIOpenURLContext *context in URLContexts) {
+        NSURL *url = context.URL;
+        if ([url.pathExtension.lowercaseString isEqualToString:@"zip"]) {
+            [AdderPopOverViewController importExternalZipAtURL:url];
+        }
+    }
 }
 
 

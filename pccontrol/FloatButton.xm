@@ -75,28 +75,56 @@ extern PopupWindow *popupWindow;
     return frame;
 }
 
+- (UIWindowScene *)hostScene {
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]] && scene.activationState == UISceneActivationStateForegroundActive) {
+                return (UIWindowScene *)scene;
+            }
+        }
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            if (window.windowScene) return window.windowScene;
+        }
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) return (UIWindowScene *)scene;
+        }
+    }
+    return nil;
+}
+
+- (void)attachSceneIfNeeded {
+    if (!_window) return;
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *scene = [self hostScene];
+        if (scene && _window.windowScene != scene) {
+            _window.windowScene = scene;
+        }
+    }
+}
+
 - (void)buildWindow {
     CGRect frame = [self frameForCurrentScreen];
-    UIWindowScene *scene = (UIWindowScene *)[[UIApplication sharedApplication].connectedScenes anyObject];
-    if (scene) {
-        _window = [[UIWindow alloc] initWithWindowScene:scene];
-        _window.frame = frame;
-    } else {
-        _window = [[UIWindow alloc] initWithFrame:frame];
-    }
-    _window.windowLevel = UIWindowLevelAlert + 2;
+    // iOS 15 SpringBoard often ignores a window created with initWithWindowScene
+    // before the home screen scene is active. Create with a frame, then attach.
+    _window = [[UIWindow alloc] initWithFrame:frame];
+    _window.windowLevel = UIWindowLevelStatusBar + 100;
     _window.backgroundColor = [UIColor clearColor];
     _window.opaque = NO;
     _window.hidden = YES;
+    _window.clipsToBounds = YES;
     _window.autoresizingMask = UIViewAutoresizingNone;
+    [self attachSceneIfNeeded];
 
     UIViewController *root = [[UIViewController alloc] init];
     root.view.backgroundColor = [UIColor clearColor];
+    root.view.frame = CGRectMake(0, 0, kFloatButtonSize, kFloatButtonSize);
     _window.rootViewController = root;
+    _window.frame = frame;
+    root.view.frame = _window.bounds;
 
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.frame = CGRectMake(0, 0, kFloatButtonSize, kFloatButtonSize);
-    button.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    button.frame = root.view.bounds;
+    button.autoresizingMask = UIViewAutoresizingNone;
     button.backgroundColor = [UIColor colorWithRed:0.18 green:0.45 blue:0.95 alpha:0.94];
     button.layer.cornerRadius = kFloatButtonSize / 2.0;
     button.layer.masksToBounds = YES;
@@ -166,14 +194,31 @@ extern PopupWindow *popupWindow;
 }
 
 - (void)applyVisibility {
-    if (!_built || !_window) return;
+    if (!_window) return;
+    [self attachSceneIfNeeded];
     BOOL visible = _enabled && !_panelCovering;
     if (visible) {
-        _window.frame = [self frameForCurrentScreen];
+        CGRect frame = [self frameForCurrentScreen];
+        _window.frame = frame;
+        _window.rootViewController.view.frame = CGRectMake(0, 0, frame.size.width, frame.size.height);
+        for (UIView *subview in _window.rootViewController.view.subviews) {
+            subview.frame = _window.rootViewController.view.bounds;
+            subview.layer.cornerRadius = frame.size.width / 2.0;
+        }
         _window.hidden = NO;
     } else {
         _window.hidden = YES;
     }
+}
+
+- (void)refresh {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{ [self refresh]; });
+        return;
+    }
+    if (!_built) return;
+    if (!_window) [self buildWindow];
+    [self applyVisibility];
 }
 
 - (void)setEnabled:(BOOL)enabled {

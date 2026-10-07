@@ -6,6 +6,7 @@
 @interface FloatButton : NSObject
 - (void)setEnabled:(BOOL)enabled;
 - (void)setPanelCovering:(BOOL)covering;
+- (void)refresh;
 @end
 
 void setFloatingButtonEnabled(BOOL enabled);

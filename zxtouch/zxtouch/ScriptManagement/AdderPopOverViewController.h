@@ -19,6 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)setFolder:(NSString*)path;
 - (void)setUpperLevelViewController:(ScriptListViewController*)vc;
++ (void)importExternalZipAtURL:(NSURL *)url;
 
 @end
 

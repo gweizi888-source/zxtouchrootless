@@ -90,7 +90,7 @@
 "exampleScripts" = "示例脚本";
 "scriptRegistry" = "脚本清单";
 "darkMode" = "深色模式";
-"aboutZXTouch" = "关于 ZXTouch 1.0.5";
+"aboutZXTouch" = "关于 ZXTouch 1.0.6";
 "aboutZXTouchDetail" = "点按查看";
 "triggerCurrent" = "当前：%@";
 "disableTrigger" = "关闭此按键";
@@ -105,7 +105,7 @@
 "remoteDashboard" = "远程控制台";
 "remoteDashboardMessage" = "请在同一 Wi-Fi 下的设备打开：\n\n%@";
 "copiedClipboard" = "%@\n\n已复制到剪贴板。";
-"creditsMessage" = "版本 1.0.5\n适用于 iOS 15–17。\nhttps://github.com/Epic0001/zxtouchrootless";
+"creditsMessage" = "版本 1.0.6\n适用于 iOS 15–17。\nhttps://github.com/Epic0001/zxtouchrootless";
 "exampleScriptsMessage" = "已安装 %lu 个示例脚本：\n%@";
 "scriptRegistryMessage" = "清单版本：%@\n脚本数量：%lu\n示例路径：%@";
 "missing" = "缺失";

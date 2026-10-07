@@ -7,8 +7,10 @@
 
 #import "AdderPopOverViewController.h"
 #import "Util.h"
+#import "Config.h"
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <objc/runtime.h>
+#import <objc/message.h>
 #import <zlib.h>
 
 static const void *kZipImporterKey = &kZipImporterKey;
@@ -17,6 +19,162 @@ static NSError *zipError(NSString *message);
 @interface AdderPopOverViewController ()
 
 @end
+
+static BOOL ZXFilzaIsInstalled(void) {
+    Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
+    if (workspaceClass) {
+        id workspace = [workspaceClass performSelector:@selector(defaultWorkspace)];
+        SEL installedSelector = @selector(applicationIsInstalled:);
+        if ([workspace respondsToSelector:installedSelector]) {
+            BOOL (*installed)(id, SEL, NSString *) = (BOOL (*)(id, SEL, NSString *))objc_msgSend;
+            if (installed(workspace, installedSelector, @"com.tigisoftware.Filza")) return YES;
+        }
+    }
+    NSFileManager *files = [NSFileManager defaultManager];
+    NSArray *candidates = @[
+        @"/Applications/Filza.app",
+        @"/var/jb/Applications/Filza.app",
+    ];
+    for (NSString *path in candidates) {
+        if ([files fileExistsAtPath:path]) return YES;
+    }
+    NSString *bundleRoot = @"/var/containers/Bundle/Application";
+    for (NSString *name in [files contentsOfDirectoryAtPath:bundleRoot error:nil]) {
+        if (![name hasPrefix:@".jbroot-"]) continue;
+        NSString *filza = [[bundleRoot stringByAppendingPathComponent:name] stringByAppendingPathComponent:@"Applications/Filza.app"];
+        if ([files fileExistsAtPath:filza]) return YES;
+    }
+    return NO;
+}
+
+static void ZXOpenFilzaAtPath(NSString *path) {
+    NSString *folder = path.length ? path : @"/var/mobile";
+    NSString *escaped = [folder stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+    NSURL *url = [NSURL URLWithString:[@"filza://view" stringByAppendingString:escaped ?: @"/var/mobile"]];
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+}
+
+@interface ZXZipFolderController : UITableViewController
+@property (nonatomic, copy) NSString *directory;
+@property (nonatomic, copy) void (^pickHandler)(NSString *path);
+@property (nonatomic, copy) void (^cancelHandler)(void);
+@property (nonatomic, copy) NSArray<NSDictionary *> *entries;
+@end
+
+@implementation ZXZipFolderController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"选择 Zip";
+    self.tableView.rowHeight = 52;
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Filza" style:UIBarButtonItemStylePlain target:self action:@selector(openFilza)];
+    if (self.navigationController.viewControllers.firstObject == self) {
+        self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(closeBrowser)];
+    }
+    [self reloadEntries];
+}
+
+- (void)reloadEntries {
+    NSMutableArray *entries = [NSMutableArray array];
+    if (self.directory.length && ![self.directory isEqualToString:@"/var/mobile"]) {
+        NSString *parent = [self.directory stringByDeletingLastPathComponent];
+        if (parent.length == 0) parent = @"/";
+        [entries addObject:@{@"name": @"返回上一级", @"path": parent, @"kind": @"up"}];
+    }
+    NSArray *names = [[[NSFileManager defaultManager] contentsOfDirectoryAtPath:self.directory error:nil] sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+    for (NSString *name in names) {
+        if ([name hasPrefix:@"."]) continue;
+        NSString *full = [self.directory stringByAppendingPathComponent:name];
+        BOOL isDir = NO;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:full isDirectory:&isDir]) continue;
+        if (isDir) {
+            [entries addObject:@{@"name": name, @"path": full, @"kind": @"dir"}];
+        } else if ([[name pathExtension].lowercaseString isEqualToString:@"zip"]) {
+            [entries addObject:@{@"name": name, @"path": full, @"kind": @"zip"}];
+        }
+    }
+    self.entries = entries;
+    [self.tableView reloadData];
+}
+
+- (void)closeBrowser {
+    [self dismissViewControllerAnimated:YES completion:self.cancelHandler];
+}
+
+- (void)promptInstallFilza {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"未安装 Filza"
+                                                                   message:@"请先在 Sileo 或 Zebra 安装 Filza，然后再用它选择 zip。"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)openFilza {
+    if (!ZXFilzaIsInstalled()) {
+        [self promptInstallFilza];
+        return;
+    }
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"用 Filza 选择"
+                                                                   message:@"接下来会打开 Filza。点开 zip 后，选择「打开方式」里的 ZXTouch，就会导入。"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"打开 Filza" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        ZXOpenFilzaAtPath(self.directory);
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return MAX((NSInteger)self.entries.count, 1);
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"zip-row"];
+    if (!cell) cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"zip-row"];
+    if (self.entries.count == 0) {
+        cell.textLabel.text = @"这个目录没有 zip";
+        cell.detailTextLabel.text = @"进入子目录，或点右上角用 Filza 选择";
+        cell.accessoryType = UITableViewCellAccessoryNone;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return cell;
+    }
+    NSDictionary *entry = self.entries[indexPath.row];
+    cell.textLabel.text = entry[@"name"];
+    cell.detailTextLabel.text = nil;
+    cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+    NSString *kind = entry[@"kind"];
+    if ([kind isEqualToString:@"zip"]) {
+        cell.accessoryType = UITableViewCellAccessoryNone;
+        cell.textLabel.textColor = [UIColor systemBlueColor];
+    } else {
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        cell.textLabel.textColor = [UIColor labelColor];
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (indexPath.row >= (NSInteger)self.entries.count) return;
+    NSDictionary *entry = self.entries[indexPath.row];
+    NSString *kind = entry[@"kind"];
+    NSString *path = entry[@"path"];
+    if ([kind isEqualToString:@"zip"]) {
+        void (^pick)(NSString *) = self.pickHandler;
+        [self dismissViewControllerAnimated:YES completion:^{
+            if (pick) pick(path);
+        }];
+        return;
+    }
+    ZXZipFolderController *next = [[ZXZipFolderController alloc] initWithStyle:UITableViewStyleGrouped];
+    next.directory = path;
+    next.pickHandler = self.pickHandler;
+    next.cancelHandler = self.cancelHandler;
+    [self.navigationController pushViewController:next animated:YES];
+}
+
+@end
+
 
 @implementation AdderPopOverViewController
 {
@@ -203,8 +361,20 @@ static NSError *zipError(NSString *message);
 }
 
 - (UIViewController *)importPresenter {
-    UIViewController *host = self->upperLevel ?: self.presentingViewController ?: self;
-    return host.navigationController ?: host;
+    if (self->upperLevel) {
+        return self->upperLevel.navigationController ?: self->upperLevel;
+    }
+    UIViewController *root = nil;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+        UIWindow *window = ((UIWindowScene *)scene).windows.firstObject;
+        if (window.rootViewController) {
+            root = window.rootViewController;
+            break;
+        }
+    }
+    while (root.presentedViewController) root = root.presentedViewController;
+    return root ?: self;
 }
 
 - (void)releaseZipImporter {
@@ -212,6 +382,7 @@ static NSError *zipError(NSString *message);
     if (presenter) {
         objc_setAssociatedObject(presenter, kZipImporterKey, nil, OBJC_ASSOCIATION_ASSIGN);
     }
+    objc_setAssociatedObject(UIApplication.sharedApplication, kZipImporterKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
 - (void)finishImportWithError:(NSError *)err destination:(NSString *)destinationPath {
@@ -285,56 +456,29 @@ static NSError *zipError(NSString *message);
     [self finishImportWithError:err destination:destination];
 }
 
-- (void)promptZipPathManual {
-    UIViewController *presenter = [self importPresenter];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"导入 Zip"
-                                                                   message:@"输入 zip 的完整路径，例如：\n/var/mobile/Downloads/脚本.zip"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-        textField.placeholder = @"/var/mobile/Downloads/xxx.zip";
-        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
-        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-        textField.autocorrectionType = UITextAutocorrectionTypeNo;
-    }];
-    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
+- (void)showZipBrowser {
+    NSString *start = @"/var/mobile";
+    if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Downloads"]) {
+        start = @"/var/mobile/Downloads";
+    }
+    ZXZipFolderController *browser = [[ZXZipFolderController alloc] initWithStyle:UITableViewStyleGrouped];
+    browser.directory = start;
+    browser.pickHandler = ^(NSString *path) {
+        [self importZipFromPath:path];
+    };
+    browser.cancelHandler = ^{
         [self releaseZipImporter];
-    }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"导入" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-        [self importZipFromPath:alert.textFields.firstObject.text];
-    }]];
-    [presenter presentViewController:alert animated:YES completion:nil];
+    };
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:browser];
+    nav.modalPresentationStyle = UIModalPresentationFormSheet;
+    nav.presentationController.delegate = self;
+    [[self importPresenter] presentViewController:nav animated:YES completion:nil];
 }
 
-- (void)showLocalZipChooser {
-    UIViewController *presenter = [self importPresenter];
-    NSArray<NSString *> *zips = [self localZipPaths];
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"导入 Zip"
-                                                                   message:zips.count ? @"从本机找到的压缩包里选一个，或手动输入路径。" : @"没有在下载/文档目录找到 zip。可以把 zip 放到「文件」App 的下载目录，或手动输入路径。"
-                                                            preferredStyle:UIAlertControllerStyleActionSheet];
-
-    NSInteger shown = 0;
-    for (NSString *path in zips) {
-        NSString *title = [path lastPathComponent];
-        [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-            [self importZipFromPath:path];
-        }]];
-        shown += 1;
-        if (shown >= 12) break;
-    }
-
-    [sheet addAction:[UIAlertAction actionWithTitle:@"手动输入路径…" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
-        [self promptZipPathManual];
-    }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    if ([presentationController.presentedViewController isKindOfClass:[UINavigationController class]]) {
         [self releaseZipImporter];
-    }]];
-
-    UIPopoverPresentationController *pop = sheet.popoverPresentationController;
-    if (pop) {
-        pop.sourceView = presenter.view;
-        pop.sourceRect = CGRectMake(CGRectGetMidX(presenter.view.bounds), 72, 1, 1);
     }
-    [presenter presentViewController:sheet animated:YES completion:nil];
 }
 
 - (IBAction)importZipButtonClick:(id)sender {
@@ -343,15 +487,38 @@ static NSError *zipError(NSString *message);
         return;
     }
 
-    // The system Files document browser keeps flashing and ends on
-    // "显示文稿时出现问题" on this device. Import zip from local paths instead.
     UIViewController *presenter = [self importPresenter];
     objc_setAssociatedObject(presenter, kZipImporterKey, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [self dismissViewControllerAnimated:YES completion:^{
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [self showLocalZipChooser];
+            if (!ZXFilzaIsInstalled()) {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"未安装 Filza"
+                                                                               message:@"没有检测到 Filza。可以先在下面的目录里点 zip，或安装 Filza 后再用右上角打开。"
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"先从目录选" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+                    [self showZipBrowser];
+                }]];
+                [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
+                    [self releaseZipImporter];
+                }]];
+                [[self importPresenter] presentViewController:alert animated:YES completion:nil];
+                return;
+            }
+            [self showZipBrowser];
         });
     }];
+}
+
++ (void)importExternalZipAtURL:(NSURL *)url {
+    if (!url) return;
+    NSString *path = url.path;
+    if (path.length == 0) return;
+    AdderPopOverViewController *importer = [[AdderPopOverViewController alloc] init];
+    [importer setFolder:SCRIPTS_PATH];
+    objc_setAssociatedObject(UIApplication.sharedApplication, kZipImporterKey, importer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    BOOL access = [url startAccessingSecurityScopedResource];
+    [importer importZipFromPath:path];
+    if (access) [url stopAccessingSecurityScopedResource];
 }
 
 - (IBAction)importImageButtonClick:(id)sender {
