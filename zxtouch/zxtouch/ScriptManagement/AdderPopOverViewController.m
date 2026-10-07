@@ -385,7 +385,43 @@ static void ZXOpenFilzaAtPath(NSString *path) {
     objc_setAssociatedObject(UIApplication.sharedApplication, kZipImporterKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
+- (NSArray<NSString *> *)rootHideScriptRoots {
+    NSFileManager *files = [NSFileManager defaultManager];
+    NSMutableArray<NSString *> *roots = [NSMutableArray array];
+    NSArray *bases = @[
+        @"/var/containers/Bundle/Application",
+        @"/private/var/containers/Bundle/Application",
+    ];
+    for (NSString *base in bases) {
+        for (NSString *name in [files contentsOfDirectoryAtPath:base error:nil]) {
+            if (![name hasPrefix:@".jbroot-"]) continue;
+            NSString *mobile = [[base stringByAppendingPathComponent:name] stringByAppendingPathComponent:@"var/mobile"];
+            BOOL isDir = NO;
+            if (![files fileExistsAtPath:mobile isDirectory:&isDir] || !isDir) continue;
+            NSString *scripts = [mobile stringByAppendingPathComponent:@"Library/ZXTouch/scripts"];
+            if (![roots containsObject:scripts]) [roots addObject:scripts];
+        }
+    }
+    return roots;
+}
+
+- (BOOL)mirrorImportedScriptToRootHide:(NSString *)path {
+    if (path.length == 0) return NO;
+    NSFileManager *files = [NSFileManager defaultManager];
+    BOOL copied = NO;
+    NSString *name = path.lastPathComponent;
+    for (NSString *root in [self rootHideScriptRoots]) {
+        NSString *dest = [root stringByAppendingPathComponent:name];
+        if ([dest isEqualToString:path]) continue;
+        [files createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:nil];
+        [files removeItemAtPath:dest error:nil];
+        if ([files copyItemAtPath:path toPath:dest error:nil]) copied = YES;
+    }
+    return copied;
+}
+
 - (void)finishImportWithError:(NSError *)err destination:(NSString *)destinationPath {
+    BOOL mirrored = !err && [self mirrorImportedScriptToRootHide:destinationPath];
     dispatch_async(dispatch_get_main_queue(), ^{
         UIViewController *presenter = [self importPresenter];
         [self releaseZipImporter];
@@ -395,7 +431,11 @@ static void ZXOpenFilzaAtPath(NSString *path) {
         }
 
         [self->upperLevel refreshTable];
-        [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"imported", nil) message:[NSString stringWithFormat:NSLocalizedString(@"importedMessage", nil), [destinationPath lastPathComponent]] buttonString:NSLocalizedString(@"ok", nil)];
+        NSString *message = [NSString stringWithFormat:NSLocalizedString(@"importedMessage", nil), [destinationPath lastPathComponent]];
+        if (mirrored) {
+            message = [message stringByAppendingString:@"\n已同时复制到 RootHide 目录。"];
+        }
+        [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"imported", nil) message:message buttonString:NSLocalizedString(@"ok", nil)];
     });
 }
 

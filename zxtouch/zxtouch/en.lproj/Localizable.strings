@@ -95,7 +95,7 @@
 "exampleScripts" = "Example Scripts";
 "scriptRegistry" = "Script Registry";
 "darkMode" = "Dark Mode";
-"aboutZXTouch" = "About ZXTouch 1.0.7";
+"aboutZXTouch" = "About ZXTouch 1.0.8";
 "aboutZXTouchDetail" = "Tap to view";
 "triggerCurrent" = "Current: %@";
 "disableTrigger" = "Disable Trigger";
@@ -110,7 +110,7 @@
 "remoteDashboard" = "Remote Dashboard";
 "remoteDashboardMessage" = "Open this address from a device on the same Wi-Fi:\n\n%@";
 "copiedClipboard" = "%@\n\nCopied to the clipboard.";
-"creditsMessage" = "Version 1.0.7\niOS 15-17 port.\nhttps://github.com/Epic0001/zxtouchrootless";
+"creditsMessage" = "Version 1.0.8\niOS 15-17 port.\nhttps://github.com/Epic0001/zxtouchrootless";
 "exampleScriptsMessage" = "%lu bundled examples installed in:\n%@";
 "scriptRegistryMessage" = "Registry version: %@\nScripts: %lu\nExamples: %@";
 "missing" = "missing";

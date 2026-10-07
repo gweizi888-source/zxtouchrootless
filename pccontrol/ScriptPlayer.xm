@@ -70,6 +70,52 @@ static NSString *ZXShellPath(void)
     ]) ?: @"/bin/sh";
 }
 
+static NSString *ZXRunnerPath(NSString *path)
+{
+    if (path.length == 0) return path;
+    NSString *resolved = jbroot(path);
+    if (resolved.length == 0) return path;
+    return resolved;
+}
+
+static BOOL ZXSameDirectory(NSString *left, NSString *right)
+{
+    if (left.length == 0 || right.length == 0) return NO;
+    if ([left isEqualToString:right]) return YES;
+    NSFileManager *files = [NSFileManager defaultManager];
+    NSDictionary *leftInfo = [files attributesOfItemAtPath:left error:nil];
+    NSDictionary *rightInfo = [files attributesOfItemAtPath:right error:nil];
+    NSNumber *leftNode = leftInfo[NSFileSystemFileNumber];
+    NSNumber *rightNode = rightInfo[NSFileSystemFileNumber];
+    return leftNode != nil && rightNode != nil && [leftNode isEqualToNumber:rightNode];
+}
+
+// SpringBoard and the python/sh binaries see different /var/mobile roots on
+// RootHide. The app imports into the path SpringBoard lists. Copy that bundle
+// onto the root the runner actually opens, then execute the resolved path.
+static NSString *ZXMirrorScriptForRunner(NSString *filePath)
+{
+    NSString *resolved = ZXRunnerPath(filePath);
+    NSString *sourceBundle = [filePath stringByDeletingLastPathComponent];
+    NSString *destBundle = [resolved stringByDeletingLastPathComponent];
+    if ([sourceBundle isEqualToString:destBundle] || ZXSameDirectory(sourceBundle, destBundle)) {
+        return filePath;
+    }
+    NSFileManager *files = [NSFileManager defaultManager];
+    [files createDirectoryAtPath:[destBundle stringByDeletingLastPathComponent]
+      withIntermediateDirectories:YES
+                       attributes:nil
+                            error:nil];
+    [files removeItemAtPath:destBundle error:nil];
+    NSError *error = nil;
+    if (![files copyItemAtPath:sourceBundle toPath:destBundle error:&error]) {
+        NSLog(@"com.zjx.springboard: failed to mirror script %@ -> %@: %@", sourceBundle, destBundle, error);
+        return filePath;
+    }
+    NSLog(@"com.zjx.springboard: mirrored script %@ -> %@", sourceBundle, destBundle);
+    return [files fileExistsAtPath:resolved] ? resolved : filePath;
+}
+
 static NSString *ZXPythonModulePath(void)
 {
     // The zxtouch module ships under /usr/share/zxtouch/python and the postinst
@@ -385,21 +431,25 @@ static NSString *ZXPythonModulePath(void)
         isPlaying = false;
         return;
     }
-    // Ensure output log file exists so the >> redirect doesn't fail
-    NSString *outputLog = @"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/output";
+    NSString *runFile = ZXMirrorScriptForRunner(filePath);
+    // Ensure output log file exists so the >> redirect doesn't fail.
+    // Write it on the same root the shell will use.
+    NSString *outputLog = ZXRunnerPath(@"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/output");
+    [[NSFileManager defaultManager] createDirectoryAtPath:[outputLog stringByDeletingLastPathComponent]
+                              withIntermediateDirectories:YES
+                                               attributes:nil
+                                                    error:nil];
     if (![[NSFileManager defaultManager] fileExistsAtPath:outputLog])
         [@"" writeToFile:outputLog atomically:YES encoding:NSUTF8StringEncoding error:nil];
 
-    NSString *dateWrapper = @"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/add_datetime.sh";
+    NSString *dateWrapper = ZXRunnerPath(@"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/add_datetime.sh");
     NSString *shellPath = ZXShellPath();
-    if (![[NSFileManager defaultManager] fileExistsAtPath:dateWrapper]) {
-        NSString *wrapper = [NSString stringWithFormat:@"#!%@\nOUTPUT=/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/output\nDATE=/var/jb/usr/bin/date\nif [ ! -x \"$DATE\" ]; then DATE=/usr/bin/date; fi\nif [ ! -x \"$DATE\" ]; then DATE=/bin/date; fi\necho \"$($DATE '+%%m-%%d-%%Y %%T'): Start running script. Script path: $1\" >> \"$OUTPUT\"\nwhile IFS= read -r line; do\n    echo \"$($DATE '+%%m-%%d-%%Y %%T'): $line\" >> \"$OUTPUT\"\ndone\n", shellPath];
-        [wrapper writeToFile:dateWrapper atomically:YES encoding:NSUTF8StringEncoding error:nil];
-        chmod(dateWrapper.UTF8String, 0755);
-    }
+    NSString *wrapper = [NSString stringWithFormat:@"#!%@\nOUTPUT=%@\nDATE=/var/jb/usr/bin/date\nif [ ! -x \"$DATE\" ]; then DATE=/usr/bin/date; fi\nif [ ! -x \"$DATE\" ]; then DATE=/bin/date; fi\necho \"$($DATE '+%%m-%%d-%%Y %%T'): Start running script. Script path: $1\" >> \"$OUTPUT\"\nwhile IFS= read -r line; do\n    echo \"$($DATE '+%%m-%%d-%%Y %%T'): $line\" >> \"$OUTPUT\"\ndone\n", shellPath, outputLog];
+    [wrapper writeToFile:dateWrapper atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    chmod(dateWrapper.UTF8String, 0755);
 
-    NSString *scriptDir = [filePath stringByDeletingLastPathComponent];
-    NSString *statusFile = @"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/last_python_status";
+    NSString *scriptDir = [runFile stringByDeletingLastPathComponent];
+    NSString *statusFile = ZXRunnerPath(@"/var/mobile/Library/ZXTouch/coreutils/ScriptRuntime/last_python_status");
     NSString *pythonModulePath = ZXPythonModulePath();
     NSString *envPrefix = pythonModulePath.length > 0 ? [NSString stringWithFormat:@"PYTHONPATH=%@ ", ZXShellQuote(pythonModulePath)] : @"";
     NSString *commandToRun = [NSString stringWithFormat:@"rm -f %@; (cd %@ && %@%@ -u %@ 2>&1; echo $? > %@) | %@ %@ %@; exit $(cat %@ 2>/dev/null || echo 1)",
@@ -407,11 +457,11 @@ static NSString *ZXPythonModulePath(void)
                               ZXShellQuote(scriptDir),
                               envPrefix,
                               ZXShellQuote(pythonPath),
-                              ZXShellQuote(filePath),
+                              ZXShellQuote(runFile),
                               ZXShellQuote(statusFile),
                               ZXShellQuote(shellPath),
                               ZXShellQuote(dateWrapper),
-                              ZXShellQuote(filePath),
+                              ZXShellQuote(runFile),
                               ZXShellQuote(statusFile)];
     NSLog(@"com.zjx.springboard: command to run for running py file %@", commandToRun);
 
@@ -434,7 +484,11 @@ static NSString *ZXPythonModulePath(void)
             title = @"Python 无法运行";
             message = @"已安装的 python3 缺少 libpython。\n\n请在 Sileo 安装 3.9 或更新的 python3，然后重新安装 ZXTouch。";
         } else {
-            message = [NSString stringWithFormat:@"Python 脚本退出，代码 %d。可在日志里查看详情。", pythonExitCode];
+            NSString *detail = logTail ?: @"";
+            if (detail.length > 280) detail = [detail substringFromIndex:detail.length - 280];
+            detail = [detail stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            message = [NSString stringWithFormat:@"Python 脚本退出，代码 %d。\n运行路径：%@%@",
+                       pythonExitCode, runFile, detail.length ? [@"\n" stringByAppendingString:detail] : @""];
         }
         NSLog(@"com.zjx.springboard: %@ — %@", title, message);
         showAlertBox(title, message, 999);
