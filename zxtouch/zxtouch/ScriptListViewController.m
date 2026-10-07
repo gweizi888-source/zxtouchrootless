@@ -42,7 +42,7 @@
 
     LogViewController *logEditorViewController = [[LogViewController alloc] initWithNibName: @"LogViewController" bundle: nil];
     
-    logEditorViewController.title = @"Log";
+    logEditorViewController.title = NSLocalizedString(@"logTitle", nil);
     //[logEditorViewController setFile:RUNTIME_OUTPUT_PATH];
 
     [self presentViewController:logEditorViewController animated:YES completion:nil];
@@ -110,7 +110,9 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = self.title.length ? self.title : @"Scripts";
+    self.title = self.title.length ? self.title : NSLocalizedString(@"scriptsTitle", nil);
+    self.navigationItem.leftBarButtonItem.title = NSLocalizedString(@"logTitle", nil);
+    self.navigationController.tabBarItem.title = NSLocalizedString(@"scriptsTitle", nil);
     if (@available(iOS 11.0, *)) {
         self.navigationController.navigationBar.prefersLargeTitles = YES;
         self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAutomatic;
@@ -127,7 +129,7 @@
                                                                        message:NSLocalizedString(@"showPopUpWindow", nil)
                                        preferredStyle:UIAlertControllerStyleAlert];
          
-        UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+        UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"ok", nil) style:UIAlertActionStyleDefault
            handler:^(UIAlertAction * action) {}];
          
         [alert addAction:defaultAction];
@@ -144,7 +146,7 @@
                                                                        message:NSLocalizedString(@"006features", nil)
                                        preferredStyle:UIAlertControllerStyleAlert];
          
-        UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+        UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"ok", nil) style:UIAlertActionStyleDefault
            handler:^(UIAlertAction * action) {}];
          
         [alert addAction:defaultAction];
@@ -186,7 +188,7 @@
 
     UILabel *title = [[UILabel alloc] init];
     title.translatesAutoresizingMaskIntoConstraints = NO;
-    title.text = @"README";
+    title.text = NSLocalizedString(@"readmeTitle", nil);
     title.font = [UIFont boldSystemFontOfSize:15];
     title.textColor = UIColor.secondaryLabelColor;
 
@@ -355,7 +357,7 @@
                                                message:[NSString stringWithFormat:@"Error while deleting this file. Error message: %@", err]
                                                preferredStyle:UIAlertControllerStyleAlert];
                  
-                UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+                UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"ok", nil) style:UIAlertActionStyleDefault
                    handler:^(UIAlertAction * action) {}];
                  
                 [alert addAction:defaultAction];

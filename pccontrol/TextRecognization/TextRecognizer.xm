@@ -10,7 +10,7 @@ NSString* performTextRecognizerTextFromRawData(UInt8* eventData, NSError** error
     if (SYSTEM_VERSION_LESS_THAN(@"13.0"))
     {
         *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;OCR only supports iOS13 or newer version of iOS. iOS12 or older may be supported in the future.\r\n"}];
-        showAlertBox(@"Not Supported", @"OCR only supports iOS13 or newer version of iOS. iOS12 and older may be supported in the future.", 99);
+        showAlertBox(@"不支持", @"文字识别只支持 iOS 13 及以上。", 99);
         return nil;
     }
 

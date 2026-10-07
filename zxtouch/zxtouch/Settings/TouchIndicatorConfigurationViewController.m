@@ -72,7 +72,7 @@
 
 - (void)saveConfigAndReloadIndicator:(BOOL)reload {
     if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES]) {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Unable to write touch indicator settings." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"touchIndicatorWriteFailed", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     if (reload && isShowing) {
@@ -85,7 +85,7 @@
     // Do any additional setup after loading the view from its nib.
     self.title = NSLocalizedString(@"touchIndicator", nil);
     
-    colorStrs = @[@"Red", @"Blue", @"Green", @"White", @"Black", @"Orange", @"Yellow"];
+    colorStrs = @[NSLocalizedString(@"colorRed", nil), NSLocalizedString(@"colorBlue", nil), NSLocalizedString(@"colorGreen", nil), NSLocalizedString(@"colorWhite", nil), NSLocalizedString(@"colorBlack", nil), NSLocalizedString(@"colorOrange", nil), NSLocalizedString(@"colorYellow", nil)];
     colors = @[[UIColor redColor], [UIColor blueColor], [UIColor greenColor], [UIColor whiteColor], [UIColor blackColor], [UIColor orangeColor], [UIColor yellowColor]];
     
     UINib *SwitchCellNib = [UINib nibWithNibName:@"TableViewCellWithSwitch" bundle:nil];
@@ -119,7 +119,7 @@
     
     if (!config)
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Error. Configuration file does not exist. Please go to \"settings - fix configuration\" to fix this problem." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"configMissing", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     
@@ -133,7 +133,7 @@
 
     if (!config)
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Error. Configuration file does not exist. Please go to \"settings - fix configuration\" to fix this problem." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"configMissing", nil) buttonString:NSLocalizedString(@"ok", nil)];
     }
     
     // restart touch indicator if touch indicator is on
@@ -160,7 +160,7 @@
 
     if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES])
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Although success, the configuration file cannot be written." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"touchIndicatorWritePartial", nil) buttonString:NSLocalizedString(@"ok", nil)];
     }
      
 }
@@ -187,7 +187,7 @@
     
     if (!config)
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Error. Configuration file does not exist. Please go to \"settings - fix configuration\" to fix this problem." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"configMissing", nil) buttonString:NSLocalizedString(@"ok", nil)];
     }
     
     if (indexPath.row == 0)
@@ -225,7 +225,7 @@
         if (cell == nil) {
             cell = [[TableViewCellWithSwitch alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"SwitchCell"];
         }
-        [cell setTitleText:@"Show Coordinates"];
+        [cell setTitleText:NSLocalizedString(@"showCoordinates", nil)];
         [cell.switchBtn removeTarget:nil action:NULL forControlEvents:UIControlEventValueChanged];
         [cell.switchBtn addTarget:self action:@selector(switchCoordinatesStatus:) forControlEvents:UIControlEventValueChanged];
         BOOL showCoords = [[self touchIndicatorConfig][@"show_coordinates"] boolValue];
@@ -299,7 +299,7 @@ numberOfRowsInComponent:(NSInteger)component {
         
     if (![config writeToFile:SPRINGBOARD_CONFIG_PATH atomically:YES])
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Cannot set color. Unable to write configuration file" buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"colorWriteFailed", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 

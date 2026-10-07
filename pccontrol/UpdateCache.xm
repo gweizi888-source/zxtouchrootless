@@ -1,10 +1,12 @@
 #include "UpdateCache.h"
 #include "Common.h"
 #include "Popup.h"
+#include "FloatButton.h"
 
 #define UPDATE_POPUP_WINDOW_VOLUMN_DOWN_OPEN_FROM_CONFIG 1
 #define UPDATE_SWITCH_APP_BEFORE_RUN_SCRIPT 2
 #define UPDATE_DARK_MODE 3
+#define UPDATE_FLOATING_BUTTON 4
 
 void updateSwtichAppBeforeRunScript(BOOL value);
 void applyPanelDarkMode(BOOL dark);
@@ -44,8 +46,15 @@ void updateCacheFromRawData(UInt8* eventData, NSError **error)
         BOOL dark = config[@"dark_mode"] ? [config[@"dark_mode"] boolValue] : NO;
         applyPanelDarkMode(dark);
     }
-    else
+    if (type == UPDATE_FLOATING_BUTTON)
     {
-        NSLog(@"com.zjx.springboard: unknown task type for updating cache.");
+        NSString *configFilePath = getCommonConfigFilePath();
+        NSDictionary *config = [[NSDictionary alloc] initWithContentsOfFile:configFilePath];
+        BOOL showFloat = YES;
+        if (config[@"floating_button_enabled"])
+        {
+            showFloat = [config[@"floating_button_enabled"] boolValue];
+        }
+        setFloatingButtonEnabled(showFloat);
     }
 }

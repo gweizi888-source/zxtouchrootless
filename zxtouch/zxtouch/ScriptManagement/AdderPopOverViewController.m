@@ -12,6 +12,7 @@
 #import <zlib.h>
 
 static const void *kZipImporterKey = &kZipImporterKey;
+static NSError *zipError(NSString *message);
 
 @interface AdderPopOverViewController ()
 
@@ -45,15 +46,15 @@ static const void *kZipImporterKey = &kZipImporterKey;
 - (IBAction)createScriptButtonClick:(id)sender {
     if (!self->currentFolder)
     {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptPathNotSet", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptPathNotSet", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Script Name"
-                                                                    message:@"Please enter the script name"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"scriptName", nil)
+                                                                    message:NSLocalizedString(@"enterScriptName", nil)
                                                              preferredStyle:UIAlertControllerStyleAlert];
 
-    UIAlertAction *submit = [UIAlertAction actionWithTitle:@"Submit" style:UIAlertActionStyleDefault
+    UIAlertAction *submit = [UIAlertAction actionWithTitle:NSLocalizedString(@"submit", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {
                                                        if (alert.textFields.count > 0) {
                                                            UITextField *textField = [alert.textFields firstObject];
@@ -66,14 +67,14 @@ static const void *kZipImporterKey = &kZipImporterKey;
                                                                NSString* folderToAddPath = [self->currentFolder stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.bdl", textField.text]];
                                                                if([fileManager fileExistsAtPath:folderToAddPath isDirectory:&isDir] && isDir)
                                                                {
-                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptAlreadyExists", nil) buttonString:@"OK"];
+                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptAlreadyExists", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                                }
                                                                else
                                                                {
                                                                    [fileManager createDirectoryAtPath:folderToAddPath withIntermediateDirectories:YES attributes:nil error:&err];
                                                                    if (err)
                                                                    {
-                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createScriptFailed", nil), err] buttonString:@"OK"];
+                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createScriptFailed", nil), err] buttonString:NSLocalizedString(@"ok", nil)];
                                                                    }
                                                                    
                                                                    // add plist file
@@ -90,7 +91,7 @@ static const void *kZipImporterKey = &kZipImporterKey;
                                                                    [initContent writeToFile:[folderToAddPath stringByAppendingPathComponent:@"main.py"] atomically:YES encoding:NSUTF8StringEncoding error:&err];
                                                                    if (err)
                                                                    {
-                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createScriptFailed", nil), err] buttonString:@"OK"];
+                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createScriptFailed", nil), err] buttonString:NSLocalizedString(@"ok", nil)];
                                                                    }
                                                                    dispatch_async(dispatch_get_main_queue(), ^{
                                                                        [self->upperLevel refreshTable];
@@ -100,11 +101,11 @@ static const void *kZipImporterKey = &kZipImporterKey;
                                                            }
                                                            else
                                                            {
-                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptEmptyName", nil) buttonString:@"OK"];
+                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createScriptEmptyName", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                            }
                                                        }
                                                    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {}];
 
     [alert addAction:cancel];
@@ -122,15 +123,15 @@ static const void *kZipImporterKey = &kZipImporterKey;
 - (IBAction)createFolderButtonClick:(id)sender {
     if (!self->currentFolder)
     {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Folder Name"
-                                                                    message:@"Please enter the folder name"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"folderName", nil)
+                                                                    message:NSLocalizedString(@"enterFolderName", nil)
                                                              preferredStyle:UIAlertControllerStyleAlert];
 
-    UIAlertAction *submit = [UIAlertAction actionWithTitle:@"Submit" style:UIAlertActionStyleDefault
+    UIAlertAction *submit = [UIAlertAction actionWithTitle:NSLocalizedString(@"submit", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {
                                                        if (alert.textFields.count > 0) {
                                                            UITextField *textField = [alert.textFields firstObject];
@@ -144,14 +145,14 @@ static const void *kZipImporterKey = &kZipImporterKey;
                                                                NSString* folderToAddPath = [self->currentFolder stringByAppendingPathComponent:textField.text];
                                                                if([fileManager fileExistsAtPath:folderToAddPath isDirectory:&isDir] && isDir)
                                                                {
-                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderAlreadyExists", nil) buttonString:@"OK"];
+                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderAlreadyExists", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                                }
                                                                else
                                                                {
                                                                    [fileManager createDirectoryAtPath:folderToAddPath withIntermediateDirectories:YES attributes:nil error:&err];
                                                                    if (err)
                                                                    {
-                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createFolderFailed", nil), err] buttonString:@"OK"];
+                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createFolderFailed", nil), err] buttonString:NSLocalizedString(@"ok", nil)];
                                                                    }
                                                                    dispatch_async(dispatch_get_main_queue(), ^{
                                                                        [self->upperLevel refreshTable];
@@ -161,11 +162,11 @@ static const void *kZipImporterKey = &kZipImporterKey;
                                                            }
                                                            else
                                                            {
-                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderEmptyName", nil) buttonString:@"OK"];
+                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderEmptyName", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                            }
                                                        }
                                                    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {}];
 
     [alert addAction:cancel];
@@ -202,7 +203,8 @@ static const void *kZipImporterKey = &kZipImporterKey;
 }
 
 - (UIViewController *)importPresenter {
-    return self->upperLevel ?: self.presentingViewController ?: self;
+    UIViewController *host = self->upperLevel ?: self.presentingViewController ?: self;
+    return host.navigationController ?: host;
 }
 
 - (void)releaseZipImporter {
@@ -217,42 +219,149 @@ static const void *kZipImporterKey = &kZipImporterKey;
         UIViewController *presenter = [self importPresenter];
         [self releaseZipImporter];
         if (err) {
-            [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"Import failed: %@", err.localizedDescription] buttonString:@"OK"];
+            [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:NSLocalizedString(@"importFailed", nil), err.localizedDescription] buttonString:NSLocalizedString(@"ok", nil)];
             return;
         }
 
         [self->upperLevel refreshTable];
-        [Util showAlertBoxWithOneOption:presenter title:@"Imported" message:[NSString stringWithFormat:@"%@ was added.", [destinationPath lastPathComponent]] buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:presenter title:NSLocalizedString(@"imported", nil) message:[NSString stringWithFormat:NSLocalizedString(@"importedMessage", nil), [destinationPath lastPathComponent]] buttonString:NSLocalizedString(@"ok", nil)];
     });
+}
+
+- (void)collectZipFilesInto:(NSMutableArray<NSString *> *)outPaths
+                   fromPath:(NSString *)path
+                      depth:(NSInteger)depth
+{
+    if (depth > 2 || outPaths.count >= 40 || path.length == 0) return;
+    NSError *err = nil;
+    NSArray *names = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:path error:&err];
+    if (err || names.count == 0) return;
+
+    for (NSString *name in [names sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)]) {
+        if ([name hasPrefix:@"."]) continue;
+        NSString *full = [path stringByAppendingPathComponent:name];
+        BOOL isDir = NO;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:full isDirectory:&isDir]) continue;
+        if (isDir) {
+            [self collectZipFilesInto:outPaths fromPath:full depth:depth + 1];
+        } else if ([[name pathExtension].lowercaseString isEqualToString:@"zip"]) {
+            [outPaths addObject:full];
+        }
+        if (outPaths.count >= 40) return;
+    }
+}
+
+- (NSArray<NSString *> *)localZipPaths {
+    NSMutableArray<NSString *> *paths = [NSMutableArray array];
+    NSArray *roots = @[
+        @"/var/mobile/Downloads",
+        @"/var/mobile/Documents",
+        [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"],
+        @"/var/mobile/Library/ZXTouch",
+    ];
+    for (NSString *root in roots) {
+        [self collectZipFilesInto:paths fromPath:root depth:0];
+    }
+    return paths;
+}
+
+- (void)importZipFromPath:(NSString *)path {
+    if (path.length == 0) {
+        [self finishImportWithError:zipError(@"请选择 .zip 文件。") destination:nil];
+        return;
+    }
+    NSString *clean = [path stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    clean = [clean stringByStandardizingPath];
+    if (![[clean pathExtension].lowercaseString isEqualToString:@"zip"]) {
+        [self finishImportWithError:zipError(@"请选择 .zip 文件。") destination:nil];
+        return;
+    }
+    if (![[NSFileManager defaultManager] fileExistsAtPath:clean]) {
+        [self finishImportWithError:zipError(@"找不到这个文件。") destination:nil];
+        return;
+    }
+    NSError *err = nil;
+    NSString *destination = [self importZipAtURL:[NSURL fileURLWithPath:clean] error:&err];
+    [self finishImportWithError:err destination:destination];
+}
+
+- (void)promptZipPathManual {
+    UIViewController *presenter = [self importPresenter];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"导入 Zip"
+                                                                   message:@"输入 zip 的完整路径，例如：\n/var/mobile/Downloads/脚本.zip"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"/var/mobile/Downloads/xxx.zip";
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
+        [self releaseZipImporter];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"导入" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        [self importZipFromPath:alert.textFields.firstObject.text];
+    }]];
+    [presenter presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showLocalZipChooser {
+    UIViewController *presenter = [self importPresenter];
+    NSArray<NSString *> *zips = [self localZipPaths];
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"导入 Zip"
+                                                                   message:zips.count ? @"从本机找到的压缩包里选一个，或手动输入路径。" : @"没有在下载/文档目录找到 zip。可以把 zip 放到「文件」App 的下载目录，或手动输入路径。"
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+
+    NSInteger shown = 0;
+    for (NSString *path in zips) {
+        NSString *title = [path lastPathComponent];
+        [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+            [self importZipFromPath:path];
+        }]];
+        shown += 1;
+        if (shown >= 12) break;
+    }
+
+    [sheet addAction:[UIAlertAction actionWithTitle:@"手动输入路径…" style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        [self promptZipPathManual];
+    }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:^(__unused UIAlertAction *action) {
+        [self releaseZipImporter];
+    }]];
+
+    UIPopoverPresentationController *pop = sheet.popoverPresentationController;
+    if (pop) {
+        pop.sourceView = presenter.view;
+        pop.sourceRect = CGRectMake(CGRectGetMidX(presenter.view.bounds), 72, 1, 1);
+    }
+    [presenter presentViewController:sheet animated:YES completion:nil];
 }
 
 - (IBAction)importZipButtonClick:(id)sender {
     if (!self->currentFolder) {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 
+    // The system Files document browser keeps flashing and ends on
+    // "显示文稿时出现问题" on this device. Import zip from local paths instead.
     UIViewController *presenter = [self importPresenter];
     objc_setAssociatedObject(presenter, kZipImporterKey, self, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [self dismissViewControllerAnimated:YES completion:^{
-        // Zip-only types make the system document browser fail with
-        // "There was a problem displaying the document". Ask for any file,
-        // then only accept .zip. Present from the script list, not this popover.
-        UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[(NSString *)kUTTypeData, (NSString *)kUTTypeItem] inMode:UIDocumentPickerModeImport];
-        picker.delegate = self;
-        picker.modalPresentationStyle = UIModalPresentationFullScreen;
-        [presenter presentViewController:picker animated:YES completion:nil];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self showLocalZipChooser];
+        });
     }];
 }
 
 - (IBAction)importImageButtonClick:(id)sender {
     if (!self->currentFolder) {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 
     if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypePhotoLibrary]) {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:@"Photo Library is not available." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"photoLibraryUnavailable", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 
@@ -314,7 +423,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
     const uint8_t *bytes = data.bytes;
     NSUInteger length = data.length;
     if (length < 22) {
-        if (error) *error = zipError(@"This zip file is empty or damaged.");
+        if (error) *error = zipError(@"这个压缩包是空的或已损坏。");
         return NO;
     }
 
@@ -327,14 +436,14 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
         }
     }
     if (endOffset == NSNotFound) {
-        if (error) *error = zipError(@"This file is not a zip archive.");
+        if (error) *error = zipError(@"这不是 zip 压缩包。");
         return NO;
     }
 
     uint16_t entryCount = zipRead16(bytes + endOffset + 10);
     uint32_t directoryOffset = zipRead32(bytes + endOffset + 16);
     if (directoryOffset >= length) {
-        if (error) *error = zipError(@"This zip file is damaged.");
+        if (error) *error = zipError(@"这个压缩包已损坏。");
         return NO;
     }
 
@@ -345,7 +454,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
 
     for (uint16_t entry = 0; entry < entryCount; entry++) {
         if (offset + 46 > length || zipRead32(bytes + offset) != 0x02014b50) {
-            if (error) *error = zipError(@"This zip file is damaged.");
+            if (error) *error = zipError(@"这个压缩包已损坏。");
             return NO;
         }
         uint16_t flags = zipRead16(bytes + offset + 8);
@@ -357,7 +466,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
         uint16_t commentLength = zipRead16(bytes + offset + 32);
         uint32_t localOffset = zipRead32(bytes + offset + 42);
         if (offset + 46 + nameLength > length) {
-            if (error) *error = zipError(@"This zip file is damaged.");
+            if (error) *error = zipError(@"这个压缩包已损坏。");
             return NO;
         }
         NSString *name = [[NSString alloc] initWithBytes:bytes + offset + 46 length:nameLength encoding:NSUTF8StringEncoding];
@@ -370,18 +479,18 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
             continue;
         }
         if ((flags & 1) != 0) {
-            if (error) *error = zipError(@"Encrypted zip files are not supported.");
+            if (error) *error = zipError(@"不支持加密的压缩包。");
             return NO;
         }
         if (localOffset + 30 > length) {
-            if (error) *error = zipError(@"This zip file is damaged.");
+            if (error) *error = zipError(@"这个压缩包已损坏。");
             return NO;
         }
         uint16_t localNameLength = zipRead16(bytes + localOffset + 26);
         uint16_t localExtraLength = zipRead16(bytes + localOffset + 28);
         NSUInteger dataOffset = localOffset + 30 + localNameLength + localExtraLength;
         if (dataOffset + compressedSize > length) {
-            if (error) *error = zipError(@"This zip file is damaged.");
+            if (error) *error = zipError(@"这个压缩包已损坏。");
             return NO;
         }
 
@@ -400,11 +509,11 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
         } else if (method == 8) {
             contents = zipInflate(compressed, uncompressedSize);
         } else {
-            if (error) *error = zipError(@"This zip uses a compression method ZXTouch cannot read.");
+            if (error) *error = zipError(@"这个压缩包的压缩方式无法读取。");
             return NO;
         }
         if (!contents) {
-            if (error) *error = zipError(@"Could not decompress a file in the zip.");
+            if (error) *error = zipError(@"压缩包里有文件解压失败。");
             return NO;
         }
         if (![contents writeToFile:destination options:NSDataWritingAtomic error:error]) {
@@ -414,7 +523,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
     }
 
     if (!extracted) {
-        if (error) *error = zipError(@"The zip does not contain any files.");
+        if (error) *error = zipError(@"压缩包里没有文件。");
         return NO;
     }
     return YES;
@@ -481,7 +590,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
     NSError *err = nil;
     NSString *destinationPath = nil;
     if (![extension isEqualToString:@"zip"]) {
-        err = zipError(@"Please choose a .zip file.");
+        err = zipError(@"请选择 .zip 文件。");
     } else {
         destinationPath = [self importZipAtURL:url error:&err];
     }
@@ -519,7 +628,7 @@ static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
     }
 
     if (!imageData) {
-        err = [NSError errorWithDomain:@"ZXTouchImport" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Could not read the selected image."}];
+        err = [NSError errorWithDomain:@"ZXTouchImport" code:1 userInfo:@{NSLocalizedDescriptionKey: @"无法读取所选图片。"}];
     } else {
         [imageData writeToFile:destinationPath options:NSDataWritingAtomic error:&err];
     }

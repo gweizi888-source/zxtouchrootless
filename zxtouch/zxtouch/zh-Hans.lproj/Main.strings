@@ -2,6 +2,9 @@
 /* Class = "UITabBarItem"; title = "Item"; ObjectID = "78e-iB-1fm"; */
 "78e-iB-1fm.title" = "设置";
 
+/* Class = "UIBarButtonItem"; title = "Log"; ObjectID = "v4M-kr-sq3"; */
+"v4M-kr-sq3.title" = "日志";
+
 /* Class = "UIButton"; normalTitle = "Play"; ObjectID = "8uv-BC-Bsb"; */
 "8uv-BC-Bsb.normalTitle" = "运行";
 

@@ -84,7 +84,7 @@
         // checked
         if (indexPath.row == 0)
         {
-            [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"prompt", nil) message:NSLocalizedString(@"setActivatorRunTriggerOnScriptPage", nil)  buttonString:@"OK"];
+            [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"prompt", nil) message:NSLocalizedString(@"setActivatorRunTriggerOnScriptPage", nil)  buttonString:NSLocalizedString(@"ok", nil)];
             cell.check = NO;
             return;
         }

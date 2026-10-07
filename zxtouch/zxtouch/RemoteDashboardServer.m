@@ -429,7 +429,7 @@ BOOL ZXRemoteDashboardSetEnabled(BOOL enabled)
     NSError *directoryError = nil;
     [[NSFileManager defaultManager] createDirectoryAtPath:[ZXDashboardConfigPath stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:&directoryError];
     BOOL saved = directoryError == nil && [configuration writeToFile:ZXDashboardConfigPath atomically:YES];
-    ZXDashboardSettingsLastError = saved ? @"" : (directoryError.localizedDescription ?: @"Unable to save Remote Dashboard settings.");
+    ZXDashboardSettingsLastError = saved ? @"" : (directoryError.localizedDescription ?: @"无法保存远程控制台设置。");
     if (saved) notify_post(ZXDashboardConfigurationNotification);
     return saved;
 }
@@ -443,7 +443,7 @@ NSString *ZXRemoteDashboardURL(void)
 {
     NSMutableDictionary *configuration = ZXDashboardConfiguration();
     NSString *token = ZXDashboardToken(configuration);
-    NSString *host = ZXDashboardIPAddress() ?: @"iPad-IP-address";
+    NSString *host = ZXDashboardIPAddress() ?: @"手机IP";
     return [NSString stringWithFormat:@"http://%@:%d/?token=%@", host, 8080, token];
 }
 

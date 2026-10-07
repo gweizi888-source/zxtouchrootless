@@ -343,7 +343,7 @@ void handleTouchIndicatorTaskWithRawData(UInt8* eventData, NSError **error)
         if (![[NSFileManager defaultManager] fileExistsAtPath:configFilePath])
         {
             *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to show touch indicator because the configuration file is missing. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.\r\n"}];
-            showAlertBox(@"Error", @"Unable to show touch indicator because the configuration file is missing. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.", 999);
+            showAlertBox(@"错误", @"无法显示触摸点，配置文件不存在。", 999);
             return;
         }
         // read indicator color from the config file
@@ -363,7 +363,7 @@ void handleTouchIndicatorTaskWithRawData(UInt8* eventData, NSError **error)
         }
         @catch (NSException *exception) {
             *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"-1;;Unable to show touch indicator because key error in configuration file: %@. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.\r\n", exception]}];
-            showAlertBox(@"Error", [NSString stringWithFormat:@"Unable to show touch indicator because key error in configuration file: %@. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.", exception], 999);
+            showAlertBox(@"错误", [NSString stringWithFormat:@"无法显示触摸点，配置有误：%@", exception], 999);
             return;
         }
 
@@ -408,7 +408,7 @@ void startTouchIndicator(NSError **error)
     if (isShowing)
     {
         *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Touch indicator is already showing\r\n"}];
-        showAlertBox(@"Error", @"Touch indicator is already showing", 999);
+        showAlertBox(@"错误", @"触摸显示器已经打开。", 999);
         return;
     }
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -426,7 +426,7 @@ void startTouchIndicator(NSError **error)
         {
             /*
             *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to show touch indicator because the configuration file is missing. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.\r\n"}];
-            showAlertBox(@"Error", @"Unable to show touch indicator because the configuration file is missing. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.", 999);
+            showAlertBox(@"错误", @"无法显示触摸点，配置文件不存在。", 999);
             return;
             */
                     // read indicator color from the config file
@@ -444,7 +444,7 @@ void startTouchIndicator(NSError **error)
             @catch (NSException *exception) {
                 NSLog(@"com.zjx.springboard: 123123");
                 *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"-1;;Unable to show touch indicator because key error in configuration file: %@. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.\r\n", exception]}];
-                showAlertBox(@"Error", [NSString stringWithFormat:@"Unable to show touch indicator because key error in configuration file: %@. Please go to \"zxtouch - settings - fix configuration\" to fix this problem.", exception], 999);
+                showAlertBox(@"错误", [NSString stringWithFormat:@"无法显示触摸点，配置有误：%@", exception], 999);
                 return;
             }
         }
@@ -461,7 +461,7 @@ void startTouchIndicator(NSError **error)
 
         if (screenBoundsWidth == 0 || screenBoundsHeight == 0)
         {
-            showAlertBox(@"Error", @"Cannot get screen bound.", 999);
+            showAlertBox(@"错误", @"读不到屏幕范围。", 999);
             *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Cannot get screen bound\r\n"}];
             return;
         }

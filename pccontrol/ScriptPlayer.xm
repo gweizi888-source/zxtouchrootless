@@ -314,7 +314,7 @@ static NSString *ZXPythonModulePath(void)
 
     if (!file)
     {
-        showAlertBox(@"Error", [NSString stringWithFormat:@"Cannot play this script because zxtouch cannot open the file. File path: %@", filePath], 999);
+        showAlertBox(@"错误", [NSString stringWithFormat:@"无法打开脚本文件：%@", filePath], 999);
         isPlaying = false;
         return;
     }
@@ -371,8 +371,8 @@ static NSString *ZXPythonModulePath(void)
     NSString *pythonPath = ZXPythonPath();
     if (!pythonPath)
     {
-        showAlertBox(@"Python not installed",
-                     @"ZXTouch could not find a working python3 on this device.\n\nOpen Sileo and install the 'python3' package from Procursus, then reinstall ZXTouch so it can register the new interpreter.",
+        showAlertBox(@"未安装 Python",
+                     @"这台设备上没有可用的 python3。\n\n请在 Sileo 安装 Procursus 的 python3，然后重新安装 ZXTouch。",
                      999);
         isPlaying = false;
         return;
@@ -380,7 +380,7 @@ static NSString *ZXPythonModulePath(void)
 
     if (![[NSFileManager defaultManager] fileExistsAtPath:filePath])
     {
-        showAlertBox(@"Error", [NSString stringWithFormat:@"Cannot play this script. Script file not found in bdl folder. Script path: %@", filePath], 999);
+        showAlertBox(@"错误", [NSString stringWithFormat:@"找不到脚本文件：%@", filePath], 999);
         isPlaying = false;
         return;
     }
@@ -421,25 +421,19 @@ static NSString *ZXPythonModulePath(void)
     NSString *statusText = [NSString stringWithContentsOfFile:statusFile encoding:NSUTF8StringEncoding error:nil];
     int pythonExitCode = statusText ? [statusText intValue] : shellExitCode;
     if (!stoppedByUser && pythonExitCode != 0) {
-        NSString *title = @"Script Error";
+        NSString *title = @"脚本出错";
         NSString *message;
         NSString *logTail = [NSString stringWithContentsOfFile:outputLog encoding:NSUTF8StringEncoding error:nil] ?: @"";
         BOOL dyldLibpythonMissing = [logTail rangeOfString:@"Library not loaded" options:0].location != NSNotFound &&
                                     [logTail rangeOfString:@"libpython" options:0].location != NSNotFound;
         if (statusText == nil && shellExitCode < 0) {
-            // system2 failed before python could run — spawn was denied or the
-            // shell was unusable. Common on semi-jailbreaks with stripped
-            // entitlements. Check Console.app for `system2` NSLog output.
-            title = @"Script could not launch";
-            message = @"ZXTouch could not start a shell to run the script (posix_spawn failed).\n\nOpen Console.app (or `oslog`) and search for `com.zjx.springboard: system2` to see the exact error.";
+            title = @"脚本无法启动";
+            message = @"ZXTouch 无法启动脚本来运行这个脚本。";
         } else if (pythonExitCode == 134 && dyldLibpythonMissing) {
-            // 134 = SIGABRT. Dyld couldn't find libpython — the interpreter
-            // was linked against a path that doesn't exist on this JB (classic
-            // Procursus python3.7 on rootless).
-            title = @"Python interpreter is broken";
-            message = @"The installed python3 aborted at launch because dyld cannot find its libpython dylib.\n\nInstall the 'python3' package (3.9 or newer) from Sileo (Procursus), then reinstall ZXTouch so it re-picks the working interpreter.";
+            title = @"Python 无法运行";
+            message = @"已安装的 python3 缺少 libpython。\n\n请在 Sileo 安装 3.9 或更新的 python3，然后重新安装 ZXTouch。";
         } else {
-            message = [NSString stringWithFormat:@"Python script exited with code %d. Open Logs for the traceback.", pythonExitCode];
+            message = [NSString stringWithFormat:@"Python 脚本退出，代码 %d。可在日志里查看详情。", pythonExitCode];
         }
         NSLog(@"com.zjx.springboard: %@ — %@", title, message);
         showAlertBox(title, message, 999);

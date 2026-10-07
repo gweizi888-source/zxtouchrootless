@@ -32,6 +32,7 @@
 #include "Screen.h"
 #include "AlertBox.h"
 #include "Popup.h"
+#include "FloatButton.h"
 #include "Record.h"
 #include "Toast.h"
 #include "Play.h"
@@ -174,7 +175,7 @@ static void runConfiguredTriggerAction(NSString *action, NSString *scriptPath)
     {
         NSError *err = nil;
         stopScriptPlaying(&err);
-        showAlertBox(@"ZXTouch", @"Script stopped.", 1);
+        showAlertBox(@"ZXTouch", @"脚本已停止。", 1);
         return;
     }
 
@@ -183,14 +184,14 @@ static void runConfiguredTriggerAction(NSString *action, NSString *scriptPath)
         if (isRecordingStart())
         {
             stopRecording();
-            showAlertBox(@"ZXTouch", @"Recording stopped and saved.", 1);
+            showAlertBox(@"ZXTouch", @"录制已停止并保存。", 1);
         }
         else
         {
             NSError *err = nil;
             startRecording(0, &err);
-            if (err) showAlertBox(@"Error", [NSString stringWithFormat:@"Unable to start recording: %@", [err localizedDescription]], 999);
-            else showAlertBox(@"ZXTouch", @"Recording started.", 1);
+            if (err) showAlertBox(@"错误", [NSString stringWithFormat:@"无法开始录制：%@", [err localizedDescription]], 999);
+            else showAlertBox(@"ZXTouch", @"已开始录制。", 1);
         }
         return;
     }
@@ -201,11 +202,11 @@ static void runConfiguredTriggerAction(NSString *action, NSString *scriptPath)
         {
             NSError *err = nil;
             playScript((UInt8*)[scriptPath UTF8String], &err);
-            if (err) showAlertBox(@"Error", [err localizedDescription], 999);
+            if (err) showAlertBox(@"错误", [err localizedDescription], 999);
         }
         else
         {
-            showAlertBox(@"ZXTouch", @"No default trigger script is set.", 2);
+            showAlertBox(@"ZXTouch", @"未设置要运行的脚本。", 2);
         }
         return;
     }
@@ -220,13 +221,13 @@ static void runConfiguredTriggerAction(NSString *action, NSString *scriptPath)
     {
         NSError *err = nil;
         stopScriptPlaying(&err);
-        showAlertBox(@"ZXTouch", @"Script stopped.", 1);
+        showAlertBox(@"ZXTouch", @"脚本已停止。", 1);
         return;
     }
     if (isRecordingStart())
     {
         stopRecording();
-        showAlertBox(@"ZXTouch", @"Recording stopped and saved.", 1);
+        showAlertBox(@"ZXTouch", @"录制已停止并保存。", 1);
         [popupWindow show];
         return;
     }
@@ -334,6 +335,7 @@ Boolean initConfig()
     {
         //showAlertBox(@"Error", configFilePath, 999);
         NSLog(@"com.zjx.springboard: unable to get config file. File not found. Using default value. Path: %@", configFilePath);
+        setFloatingButtonEnabled(YES);
         return true;
     }
     // read indicator color from the config file
@@ -344,7 +346,7 @@ Boolean initConfig()
         startTouchIndicator(&err);
         if (err)
         {
-            showAlertBox(@"Error", [NSString stringWithFormat:@"Cannot start touch indicator, error info: %@", err], 999);
+            showAlertBox(@"错误", [NSString stringWithFormat:@"无法打开触摸显示器：%@", err], 999);
         }
     }
 
@@ -358,6 +360,13 @@ Boolean initConfig()
     {
         updateSwtichAppBeforeRunScript([config[@"switch_app_before_run_script"] boolValue]);
     }
+
+    BOOL showFloat = YES;
+    if (config[@"floating_button_enabled"])
+    {
+        showFloat = [config[@"floating_button_enabled"] boolValue];
+    }
+    setFloatingButtonEnabled(showFloat);
 
     return true;
 }
@@ -387,6 +396,7 @@ Boolean init()
             [@"3-screen-set" writeToFile:@"/var/mobile/d3.txt" atomically:YES encoding:NSUTF8StringEncoding error:nil];
 
             popupWindow = [[PopupWindow alloc] init];
+            floatButton = [[FloatButton alloc] init];
             [@"4-popup-init" writeToFile:@"/var/mobile/d4.txt" atomically:YES encoding:NSUTF8StringEncoding error:nil];
 
             initSenderId();

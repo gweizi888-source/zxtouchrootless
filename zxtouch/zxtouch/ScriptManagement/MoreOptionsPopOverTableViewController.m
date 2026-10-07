@@ -49,15 +49,15 @@
 - (void)changeName:(id)sender {
     if (!self->currentFolder)
     {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Folder Name"
-                                                                    message:@"Please enter the folder name"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"folderName", nil)
+                                                                    message:NSLocalizedString(@"enterFolderName", nil)
                                                              preferredStyle:UIAlertControllerStyleAlert];
 
-    UIAlertAction *submit = [UIAlertAction actionWithTitle:@"Submit" style:UIAlertActionStyleDefault
+    UIAlertAction *submit = [UIAlertAction actionWithTitle:NSLocalizedString(@"submit", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {
                                                        if (alert.textFields.count > 0) {
                                                            UITextField *textField = [alert.textFields firstObject];
@@ -81,14 +81,14 @@
                                                                }
                                                                if([fileManager fileExistsAtPath:newFolderPath isDirectory:&isDir])
                                                                {
-                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderAlreadyExists", nil) buttonString:@"OK"];
+                                                                   [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderAlreadyExists", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                                }
                                                                else
                                                                {
                                                                    [fileManager moveItemAtPath:self->currentFolder toPath:newFolderPath error:&err];
                                                                    if (err)
                                                                    {
-                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createFolderFailed", nil), err] buttonString:@"OK"];
+                                                                       [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:@"%@%@", NSLocalizedString(@"createFolderFailed", nil), err] buttonString:NSLocalizedString(@"ok", nil)];
                                                                        return;
                                                                    }
                                                                    self->currentFolder = newFolderPath;
@@ -101,11 +101,11 @@
                                                            }
                                                            else
                                                            {
-                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderEmptyName", nil) buttonString:@"OK"];
+                                                               [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderEmptyName", nil) buttonString:NSLocalizedString(@"ok", nil)];
                                                            }
                                                        }
                                                    }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction * action) {}];
 
     [alert addAction:cancel];
@@ -144,7 +144,7 @@
     NSError *error = nil;
     [[NSFileManager defaultManager] moveItemAtPath:source toPath:dest error:&error];
     if (error) {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:[NSString stringWithFormat:@"Error while moving files. Error: %@",error] buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:NSLocalizedString(@"moveFailed", nil), error] buttonString:NSLocalizedString(@"ok", nil)];
     }
 }
 

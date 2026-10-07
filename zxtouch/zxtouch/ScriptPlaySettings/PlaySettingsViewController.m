@@ -318,7 +318,7 @@
     
     if (![self isInt:repeatTimesCell.input.text] || ![self isFloat:intervalCell.input.text] || ![self isFloat:speedCell.input.text])
     {
-        [Util showAlertBoxWithOneOption:self title:@"Error" message:@"Please input integer for repeat times and float for interval and speed" buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"playSettingsInputError", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
     

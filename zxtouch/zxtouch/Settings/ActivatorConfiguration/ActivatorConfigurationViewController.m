@@ -112,7 +112,7 @@
     
     if ([[table allKeys] count] == 0)
     {
-        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"prompt", nil) message:NSLocalizedString(@"pleaseAssignEvents", nil) buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"prompt", nil) message:NSLocalizedString(@"pleaseAssignEvents", nil) buttonString:NSLocalizedString(@"ok", nil)];
     }
 }
 

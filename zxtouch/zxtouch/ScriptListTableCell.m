@@ -65,7 +65,7 @@
 
     Socket *springBoardSocket = [[Socket alloc] init];
     if ([springBoardSocket connect:@"127.0.0.1" byPort:6000] != 0) {
-        [Util showAlertBoxWithOneOption:_parentViewController title:@"Error" message:@"Cannot play script. ZXTouch service is not running." buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:_parentViewController title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"playServiceDown", nil) buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 
@@ -77,8 +77,8 @@
     [springBoardSocket close];
 
     if (result.length == 0 || [result characterAtIndex:0] != '0') {
-        NSString *detail = result.length ? result : @"No response from ZXTouch service.";
-        [Util showAlertBoxWithOneOption:_parentViewController title:@"Error" message:[NSString stringWithFormat:@"Cannot play script. Error: %@", detail] buttonString:@"OK"];
+        NSString *detail = result.length ? result : NSLocalizedString(@"noServiceResponse", nil);
+        [Util showAlertBoxWithOneOption:_parentViewController title:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:NSLocalizedString(@"playFailed", nil), detail] buttonString:NSLocalizedString(@"ok", nil)];
     }
 }
 

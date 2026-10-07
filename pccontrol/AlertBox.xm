@@ -93,12 +93,12 @@ NSString *promptInputFromRawData(UInt8 *eventData, NSError **error)
             textField.text = defaultValue;
             textField.clearButtonMode = UITextFieldViewModeWhileEditing;
         }];
-        [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
             cancelled = YES;
             appendPromptDebugLog(@"cancelled");
             cleanup();
         }]];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             result = alert.textFields.firstObject.text ?: @"";
             appendPromptDebugLog([NSString stringWithFormat:@"ok length=%lu", (unsigned long)result.length]);
             cleanup();
@@ -158,7 +158,7 @@ void showAlertBox(NSString* title, NSString* content, int dismissTime)
             });
         };
 
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+        [alert addAction:[UIAlertAction actionWithTitle:@"好"
             style:UIAlertActionStyleDefault
             handler:^(UIAlertAction *a) { cleanup(); }]];
 

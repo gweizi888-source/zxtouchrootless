@@ -110,10 +110,10 @@ void playHasStoppedCallBack()
     }
 
     NSString *bundlePath = [scriptPlayer getCurrentBundlePath];
-    NSString *scriptName = (bundlePath.length > 0) ? [[bundlePath lastPathComponent] stringByDeletingPathExtension] : @"Unknown";
+    NSString *scriptName = (bundlePath.length > 0) ? [[bundlePath lastPathComponent] stringByDeletingPathExtension] : @"未知";
     int completedRuns = [scriptPlayer getCompletedRuns];
 
-    NSString *msg = [NSString stringWithFormat:@"Script: %@\nSpeed: %.1f×\nPlayed: %d time(s)",
+    NSString *msg = [NSString stringWithFormat:@"脚本：%@\n速度：%.1f×\n已播放：%d 次",
                      scriptName, currentRunSpeed, completedRuns];
-    showAlertBox(@"Script Finished", msg, 0);
+    showAlertBox(@"脚本已结束", msg, 0);
 }

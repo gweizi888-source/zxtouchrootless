@@ -36,7 +36,7 @@ void startRecording(CFWriteStreamRef requestClient, NSError **error)
     if (device_screen_width == 0 || device_screen_height == 0)
     {
         *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to start recording. Cannot get screen size.\r\n"}];
-        showAlertBox(@"Error", @"Unable to start recording. Cannot get screen size.", 999);
+        showAlertBox(@"错误", @"无法开始录制，读不到屏幕尺寸。", 999);
         return;
     }
     
@@ -57,7 +57,7 @@ void startRecording(CFWriteStreamRef requestClient, NSError **error)
     {
         NSLog(@"com.zjx.springboard: create script recording folder error. Error: %@", err);
         *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Create script recording folder error.\r\n"}];
-        showAlertBox(@"Error", [NSString stringWithFormat:@"Cannot create script. Error info: %@", err], 999);
+        showAlertBox(@"错误", [NSString stringWithFormat:@"无法创建脚本：%@", err], 999);
         return;
     }
 
@@ -189,7 +189,7 @@ static void recordIOHIDEventCallback(void* target, void* refcon, IOHIDServiceRef
     {
         isRecording = false;
 
-        showAlertBox(@"Error", @"Unknown error while recording script. Recording is now stopping. Error code: 31.", 999);
+        showAlertBox(@"错误", @"录制时出现未知错误，已停止。错误代码：31。", 999);
         return;
     }
     if (IOHIDEventGetType(parentEvent) == kIOHIDEventTypeDigitizer)

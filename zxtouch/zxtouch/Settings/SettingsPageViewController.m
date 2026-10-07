@@ -69,17 +69,17 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 }
 
 - (NSString *)triggerActionTitle:(NSString *)action {
-    if ([action isEqualToString:ZX_ACTION_TOGGLE_PANEL]) return @"Toggle Panel";
-    if ([action isEqualToString:ZX_ACTION_STOP_SCRIPT]) return @"Stop Script";
-    if ([action isEqualToString:ZX_ACTION_TOGGLE_RECORDING]) return @"Toggle Recording";
-    if ([action isEqualToString:ZX_ACTION_RUN_SCRIPT]) return @"Run Default Script";
-    return @"Smart Toggle";
+    if ([action isEqualToString:ZX_ACTION_TOGGLE_PANEL]) return NSLocalizedString(@"togglePanel", nil);
+    if ([action isEqualToString:ZX_ACTION_STOP_SCRIPT]) return NSLocalizedString(@"stopScript", nil);
+    if ([action isEqualToString:ZX_ACTION_TOGGLE_RECORDING]) return NSLocalizedString(@"toggleRecording", nil);
+    if ([action isEqualToString:ZX_ACTION_RUN_SCRIPT]) return NSLocalizedString(@"runDefaultScript", nil);
+    return NSLocalizedString(@"smartToggle", nil);
 }
 
 - (NSString *)triggerTitle:(NSString *)triggerKey {
-    if ([triggerKey isEqualToString:ZX_TRIGGER_VOLUME_UP]) return @"Volume Up";
-    if ([triggerKey isEqualToString:ZX_TRIGGER_HOME]) return @"Home Button";
-    return @"Volume Down";
+    if ([triggerKey isEqualToString:ZX_TRIGGER_VOLUME_UP]) return NSLocalizedString(@"volumeUp", nil);
+    if ([triggerKey isEqualToString:ZX_TRIGGER_HOME]) return NSLocalizedString(@"homeButton", nil);
+    return NSLocalizedString(@"volumeDown", nil);
 }
 
 - (NSMutableDictionary *)triggerConfigForKey:(NSString *)triggerKey {
@@ -119,14 +119,13 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 
 - (NSString *)triggerSummaryForKey:(NSString *)triggerKey {
     NSDictionary *trigger = [self triggerConfigForKey:triggerKey];
-    if (![trigger[@"enabled"] boolValue]) return @"Off";
-    NSString *clickWord = [trigger[@"count"] intValue] == 1 ? @"click" : @"clicks";
+    if (![trigger[@"enabled"] boolValue]) return NSLocalizedString(@"triggerOff", nil);
     NSString *actionTitle = [self triggerActionTitle:trigger[@"action"]];
     NSString *script = trigger[@"script"];
     if ([trigger[@"action"] isEqualToString:ZX_ACTION_RUN_SCRIPT] && [script length] > 0) {
-        actionTitle = [NSString stringWithFormat:@"Run %@", [[script lastPathComponent] stringByDeletingPathExtension]];
+        actionTitle = [NSString stringWithFormat:NSLocalizedString(@"runNamedScript", nil), [[script lastPathComponent] stringByDeletingPathExtension]];
     }
-    return [NSString stringWithFormat:@"%@ %@ -> %@", trigger[@"count"], clickWord, actionTitle];
+    return [NSString stringWithFormat:NSLocalizedString(@"triggerSummary", nil), trigger[@"count"], actionTitle];
 }
 
 - (NSArray<NSString *> *)availableScriptPaths {
@@ -161,14 +160,16 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     NSMutableArray *cells = [NSMutableArray arrayWithObject:@{
         @"type": @(SETTING_CELL_SWITCH),
         @"title": NSLocalizedString(@"webServer", nil),
+        @"icon": @"globe",
         @"switch_click_handler": NSStringFromSelector(@selector(handleWebServerWithSwitchCellInstance:)),
         @"switch_init_status": @(enabled)
     }];
     if (enabled) {
         [cells addObject:@{
             @"type": @(SETTING_CELL_ENTRY),
-            @"title": @"Dashboard URL",
-            @"secondary_title": @"Tap to view and copy",
+            @"title": NSLocalizedString(@"dashboardURL", nil),
+            @"secondary_title": NSLocalizedString(@"dashboardURLHint", nil),
+            @"icon": @"link",
             @"row_click_handler": NSStringFromSelector(@selector(handleDashboardURLTap:))
         }];
     }
@@ -178,57 +179,10 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
-    self.title = @"Settings";
-    
-    sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), @"Automation", NSLocalizedString(@"script", nil), @"Appearance", @"About"];
+    self.title = NSLocalizedString(@"settingsTitle", nil);
+    self.navigationController.tabBarItem.title = NSLocalizedString(@"settingsTitle", nil);
     configManager = [[ConfigManager alloc] initWithPath:SPRINGBOARD_CONFIG_PATH];
-    BOOL doubleClickPopup = YES;
-    if ([configManager getValueFromKey:@"double_click_volume_show_popup"])
-    {
-        doubleClickPopup = [[configManager getValueFromKey:@"double_click_volume_show_popup"] boolValue];
-    }
-    
-    BOOL switchAppBeforeRunScript = YES;
-    if ([configManager getValueFromKey:@"switch_app_before_run_script"])
-    {
-        switchAppBeforeRunScript = [[configManager getValueFromKey:@"switch_app_before_run_script"] boolValue];
-    }
 
-    BOOL showFinishedPopup = YES;
-    if ([configManager getValueFromKey:@"show_script_finished_popup"])
-    {
-        showFinishedPopup = [[configManager getValueFromKey:@"show_script_finished_popup"] boolValue];
-    }
-
-    BOOL darkMode = [self darkModeEnabled];
-
-    // [@{"type": ?, @"title": ?, @"content": ?, ... more depends on the cell type}]
-    //
-    cellsForEachSection = @[
-        [self remoteManagementCells],
-        @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
-        ],
-        @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Volume Up", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_UP], @"trigger_key": ZX_TRIGGER_VOLUME_UP, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Volume Down", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_DOWN], @"trigger_key": ZX_TRIGGER_VOLUME_DOWN, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Home Button", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_HOME], @"trigger_key": ZX_TRIGGER_HOME, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))}
-        ],
-        @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"switchAppBeforePlaying", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleSwitchAppBeforePlaying:)), @"switch_init_status": @(switchAppBeforeRunScript)},
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": @"Script Finished Popup", @"switch_click_handler": NSStringFromSelector(@selector(handleScriptFinishedPopupToggle:)), @"switch_init_status": @(showFinishedPopup)},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Example Scripts", @"secondary_title": EXAMPLE_SCRIPTS_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleExamplesTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Script Registry", @"secondary_title": SCRIPT_REGISTRY_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleRegistryTap:))}
-        ],
-        @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": @"Dark Mode", @"switch_click_handler": NSStringFromSelector(@selector(handleDarkModeToggle:)), @"switch_init_status": @(darkMode)}
-        ],
-        @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"ZXTouch Rootless 1.0.0", @"secondary_title": @"iOS 15-17 port by Epic0001", @"row_click_handler": NSStringFromSelector(@selector(handleCreditsTap:))}
-        ]
-    ];
-     
     UINib *SwitchCellNib = [UINib nibWithNibName:@"TableViewCellWithSwitch" bundle:nil];
     [_tableView registerNib:SwitchCellNib forCellReuseIdentifier:@"SwitchCell"];
 
@@ -239,6 +193,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     _tableView.tableFooterView = [[UIView alloc] init];
     _tableView.rowHeight = 54;
     _tableView.separatorInset = UIEdgeInsetsMake(0, 52, 0, 0);
+    [self reloadSettingsModel];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -263,33 +218,52 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     }
 
     BOOL darkMode = [self darkModeEnabled];
+    BOOL floatingButton = YES;
+    if ([configManager getValueFromKey:@"floating_button_enabled"])
+        floatingButton = [[configManager getValueFromKey:@"floating_button_enabled"] boolValue];
 
-    sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), @"Automation", NSLocalizedString(@"script", nil), @"Appearance", @"About"];
+    sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), NSLocalizedString(@"automation", nil), NSLocalizedString(@"script", nil), NSLocalizedString(@"appearance", nil), NSLocalizedString(@"about", nil)];
     cellsForEachSection = @[
         [self remoteManagementCells],
         @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"icon": @"hand.tap", @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"floatingButton", nil), @"icon": @"circle.circle", @"switch_click_handler": NSStringFromSelector(@selector(handleFloatingButtonToggle:)), @"switch_init_status": @(floatingButton)},
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"icon": @"speaker.wave.2", @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
         ],
         @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Volume Up", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_UP], @"trigger_key": ZX_TRIGGER_VOLUME_UP, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Volume Down", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_DOWN], @"trigger_key": ZX_TRIGGER_VOLUME_DOWN, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Home Button", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_HOME], @"trigger_key": ZX_TRIGGER_HOME, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))}
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"volumeUp", nil), @"icon": @"speaker.plus", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_UP], @"trigger_key": ZX_TRIGGER_VOLUME_UP, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"volumeDown", nil), @"icon": @"speaker.minus", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_VOLUME_DOWN], @"trigger_key": ZX_TRIGGER_VOLUME_DOWN, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))},
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"homeButton", nil), @"icon": @"house", @"secondary_title": [self triggerSummaryForKey:ZX_TRIGGER_HOME], @"trigger_key": ZX_TRIGGER_HOME, @"row_click_handler": NSStringFromSelector(@selector(handleTriggerTap:))}
         ],
         @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"switchAppBeforePlaying", nil), @"switch_click_handler": NSStringFromSelector(@selector(handleSwitchAppBeforePlaying:)), @"switch_init_status": @(switchAppBeforeRunScript)},
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": @"Script Finished Popup", @"switch_click_handler": NSStringFromSelector(@selector(handleScriptFinishedPopupToggle:)), @"switch_init_status": @(showFinishedPopup)},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Example Scripts", @"secondary_title": EXAMPLE_SCRIPTS_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleExamplesTap:))},
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"Script Registry", @"secondary_title": SCRIPT_REGISTRY_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleRegistryTap:))}
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"switchAppBeforePlaying", nil), @"icon": @"arrow.triangle.2.circlepath", @"switch_click_handler": NSStringFromSelector(@selector(handleSwitchAppBeforePlaying:)), @"switch_init_status": @(switchAppBeforeRunScript)},
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"scriptFinishedPopup", nil), @"icon": @"checkmark.circle", @"switch_click_handler": NSStringFromSelector(@selector(handleScriptFinishedPopupToggle:)), @"switch_init_status": @(showFinishedPopup)},
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"exampleScripts", nil), @"icon": @"folder", @"secondary_title": EXAMPLE_SCRIPTS_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleExamplesTap:))},
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"scriptRegistry", nil), @"icon": @"list.bullet.rectangle", @"secondary_title": SCRIPT_REGISTRY_PATH, @"row_click_handler": NSStringFromSelector(@selector(handleRegistryTap:))}
         ],
         @[
-            @{@"type": @(SETTING_CELL_SWITCH), @"title": @"Dark Mode", @"switch_click_handler": NSStringFromSelector(@selector(handleDarkModeToggle:)), @"switch_init_status": @(darkMode)}
+            @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"darkMode", nil), @"icon": @"moon", @"switch_click_handler": NSStringFromSelector(@selector(handleDarkModeToggle:)), @"switch_init_status": @(darkMode)}
         ],
         @[
-            @{@"type": @(SETTING_CELL_ENTRY), @"title": @"ZXTouch Rootless 1.0.0", @"secondary_title": @"iOS 15-17 port by Epic0001", @"row_click_handler": NSStringFromSelector(@selector(handleCreditsTap:))}
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"aboutZXTouch", nil), @"icon": @"info.circle", @"secondary_title": NSLocalizedString(@"aboutZXTouchDetail", nil), @"row_click_handler": NSStringFromSelector(@selector(handleCreditsTap:))}
         ]
     ];
     [_tableView reloadData];
+}
+
+- (void)notifyTweakCache:(NSString *)command {
+    Socket *socket = [[Socket alloc] init];
+    if ([socket connect:@"127.0.0.1" byPort:6000] != 0) return;
+    [socket setRecvTimeout:3];
+    [socket send:[command stringByAppendingString:@"\r\n"]];
+    [socket recv:1024];
+    [socket close];
+}
+
+- (void)handleFloatingButtonToggle:(UISwitch *)s {
+    [configManager updateKey:@"floating_button_enabled" forValue:@([s isOn])];
+    [configManager save];
+    [self notifyTweakCache:@"904"];
 }
 
 - (void)handleSwitchAppBeforePlaying:(UISwitch*)s {
@@ -304,11 +278,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         [configManager save];
     }
     
-    Socket *socket = [[Socket alloc] init];
-    [socket connect:@"127.0.0.1" byPort:6000];
-    [socket send:@"902"];
-    [socket recv:1024];
-    [socket close];
+    [self notifyTweakCache:@"902"];
 }
 
 - (void)handleScriptFinishedPopupToggle:(UISwitch*)s {
@@ -330,11 +300,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         [configManager updateKey:@"double_click_volume_show_popup" forValue:@(false)];
         [configManager save];
     }
-    Socket *socket = [[Socket alloc] init];
-    [socket connect:@"127.0.0.1" byPort:6000];
-    [socket send:@"901"];
-    [socket recv:1024];
-    [socket close];
+    [self notifyTweakCache:@"901"];
 }
 
 - (void)setVolumeAction:(NSString *)action {
@@ -343,9 +309,11 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     [self reloadSettingsModel];
 }
 
+static const void *ZXTriggerKeyAssoc = &ZXTriggerKeyAssoc;
+
 - (NSString *)triggerKeyFromCell:(TableViewCellWithEntry *)cell {
-    if ([cell.title.text isEqualToString:@"Volume Up"]) return ZX_TRIGGER_VOLUME_UP;
-    if ([cell.title.text isEqualToString:@"Home Button"]) return ZX_TRIGGER_HOME;
+    NSString *key = objc_getAssociatedObject(cell, ZXTriggerKeyAssoc);
+    if ([key isKindOfClass:[NSString class]] && key.length > 0) return key;
     return ZX_TRIGGER_VOLUME_DOWN;
 }
 
@@ -365,8 +333,8 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 
 - (void)chooseScriptForTrigger:(NSString *)triggerKey fromCell:(UITableViewCell *)cell {
     NSArray<NSString *> *scripts = [self availableScriptPaths];
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Run Script"
-        message:scripts.count ? @"Choose the script for this trigger." : @"No .bdl scripts were found."
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"runScriptEllipsis", nil)
+        message:scripts.count ? NSLocalizedString(@"chooseScript", nil) : NSLocalizedString(@"noScriptsFound", nil)
         preferredStyle:UIAlertControllerStyleActionSheet];
 
     for (NSString *script in scripts) {
@@ -381,10 +349,10 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         if (sheet.actions.count >= 18) break;
     }
 
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Enter Path..." style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"enterPath", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self handleTriggerScriptTap:(TableViewCellWithEntry *)cell];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
     UIPopoverPresentationController *pop = sheet.popoverPresentationController;
     if (pop) {
         pop.sourceView = cell;
@@ -398,17 +366,17 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     NSMutableDictionary *trigger = [self triggerConfigForKey:triggerKey];
     NSString *title = [self triggerTitle:triggerKey];
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:title
-        message:[NSString stringWithFormat:@"Current: %@", [self triggerSummaryForKey:triggerKey]]
+        message:[NSString stringWithFormat:NSLocalizedString(@"triggerCurrent", nil), [self triggerSummaryForKey:triggerKey]]
         preferredStyle:UIAlertControllerStyleActionSheet];
 
     if ([trigger[@"enabled"] boolValue]) {
-        [sheet addAction:[UIAlertAction actionWithTitle:@"Disable Trigger" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+        [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"disableTrigger", nil) style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
             NSMutableDictionary *updated = [self triggerConfigForKey:triggerKey];
             updated[@"enabled"] = @(NO);
             [self saveTriggerConfig:updated forKey:triggerKey];
         }]];
     } else {
-        [sheet addAction:[UIAlertAction actionWithTitle:@"Enable Trigger" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"enableTrigger", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             NSMutableDictionary *updated = [self triggerConfigForKey:triggerKey];
             updated[@"enabled"] = @(YES);
             [self saveTriggerConfig:updated forKey:triggerKey];
@@ -416,28 +384,27 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     }
 
     for (NSInteger count = 1; count <= 5; count++) {
-        NSString *clickWord = count == 1 ? @"click" : @"clicks";
-        [sheet addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"%ld %@", (long)count, clickWord] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [sheet addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:NSLocalizedString(@"clickCount", nil), (long)count] style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             [self setCount:count forTrigger:triggerKey];
         }]];
     }
 
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Run Script..." style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"runScriptEllipsis", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self chooseScriptForTrigger:triggerKey fromCell:cell];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Toggle Panel" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"togglePanel", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setAction:ZX_ACTION_TOGGLE_PANEL forTrigger:triggerKey];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Stop Script" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"stopScript", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setAction:ZX_ACTION_STOP_SCRIPT forTrigger:triggerKey];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Toggle Recording" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"toggleRecording", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setAction:ZX_ACTION_TOGGLE_RECORDING forTrigger:triggerKey];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Smart Toggle" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"smartToggle", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setAction:ZX_ACTION_SMART_TOGGLE forTrigger:triggerKey];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
 
     UIPopoverPresentationController *pop = sheet.popoverPresentationController;
     if (pop) {
@@ -448,26 +415,26 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
 }
 
 - (void)handleVolumeActionTap:(TableViewCellWithEntry*)cell {
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Trigger Action"
-        message:@"Choose the action fired by the Double-click Volume Down event."
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"volumeDown", nil)
+        message:NSLocalizedString(@"chooseScript", nil)
         preferredStyle:UIAlertControllerStyleActionSheet];
 
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Smart Toggle" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"smartToggle", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setVolumeAction:ZX_ACTION_SMART_TOGGLE];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Toggle Panel" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"togglePanel", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setVolumeAction:ZX_ACTION_TOGGLE_PANEL];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Stop Script" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"stopScript", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setVolumeAction:ZX_ACTION_STOP_SCRIPT];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Toggle Recording" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"toggleRecording", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setVolumeAction:ZX_ACTION_TOGGLE_RECORDING];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Run Default Script" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"runDefaultScript", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         [self setVolumeAction:ZX_ACTION_RUN_SCRIPT];
     }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [sheet addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
 
     UIPopoverPresentationController *pop = sheet.popoverPresentationController;
     if (pop) {
@@ -481,20 +448,20 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     NSString *triggerKey = [self triggerKeyFromCell:cell];
     NSMutableDictionary *trigger = [self triggerConfigForKey:triggerKey];
     NSString *current = trigger[@"script"] ?: @"";
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Default Trigger Script"
-        message:@"Paste a .bdl path to run from this trigger."
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"triggerScriptTitle", nil)
+        message:NSLocalizedString(@"triggerScriptMessage", nil)
         preferredStyle:UIAlertControllerStyleAlert];
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
         textField.placeholder = @"/var/mobile/Library/ZXTouch/scripts/example.bdl";
         textField.text = current;
         textField.clearButtonMode = UITextFieldViewModeWhileEditing;
     }];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Clear" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"clear", nil) style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
         NSMutableDictionary *updated = [self triggerConfigForKey:triggerKey];
         updated[@"script"] = @"";
         [self saveTriggerConfig:updated forKey:triggerKey];
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Save" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"save", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSString *path = alert.textFields.firstObject.text ?: @"";
         NSMutableDictionary *updated = [self triggerConfigForKey:triggerKey];
         updated[@"enabled"] = @(YES);
@@ -502,7 +469,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         updated[@"script"] = path;
         [self saveTriggerConfig:updated forKey:triggerKey];
     }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -516,24 +483,24 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     if (!ZXRemoteDashboardSetEnabled(YES)) {
         [s setOn:NO animated:YES];
         NSString *dashboardError = ZXRemoteDashboardLastError();
-        [Util showAlertBoxWithOneOption:self title:@"Dashboard unavailable"
-            message:dashboardError.length ? dashboardError : @"Unable to start the local dashboard."
-            buttonString:@"OK"];
+        [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"dashboardUnavailable", nil)
+            message:dashboardError.length ? dashboardError : NSLocalizedString(@"dashboardStartFailed", nil)
+            buttonString:NSLocalizedString(@"ok", nil)];
         return;
     }
 
-    [Util showAlertBoxWithOneOption:self title:@"Remote Dashboard"
-        message:[NSString stringWithFormat:@"Open this address from a device on the same Wi-Fi:\n\n%@", ZXRemoteDashboardURL()]
-        buttonString:@"OK"];
+    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"remoteDashboard", nil)
+        message:[NSString stringWithFormat:NSLocalizedString(@"remoteDashboardMessage", nil), ZXRemoteDashboardURL()]
+        buttonString:NSLocalizedString(@"ok", nil)];
     [self reloadSettingsModel];
 }
 
 - (void)handleDashboardURLTap:(TableViewCellWithEntry *)cell {
     NSString *url = ZXRemoteDashboardURL();
     UIPasteboard.generalPasteboard.string = url;
-    [Util showAlertBoxWithOneOption:self title:@"Dashboard URL"
-        message:[NSString stringWithFormat:@"%@\n\nCopied to the clipboard.", url]
-        buttonString:@"OK"];
+    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"dashboardURL", nil)
+        message:[NSString stringWithFormat:NSLocalizedString(@"copiedClipboard", nil), url]
+        buttonString:NSLocalizedString(@"ok", nil)];
 }
 
 - (void)handleDarkModeToggle:(UISwitch*)s {
@@ -556,34 +523,29 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         }
     }
 
-    // Notify SpringBoard to apply dark mode to the panel (command 903)
-    Socket *socket = [[Socket alloc] init];
-    [socket connect:@"127.0.0.1" byPort:6000];
-    [socket send:@"903"];
-    [socket recv:1024];
-    [socket close];
+    [self notifyTweakCache:@"903"];
 }
 
 - (void)handleCreditsTap:(TableViewCellWithEntry*)cell {
     // Show a brief about alert
-    [Util showAlertBoxWithOneOption:self title:@"ZXTouch Rootless"
-        message:@"iOS 16 Rootless (Dopamine) port by Epic0001\nhttps://github.com/Epic0001/zxtouchrootless"
-        buttonString:@"OK"];
+    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"aboutZXTouch", nil)
+        message:NSLocalizedString(@"creditsMessage", nil)
+        buttonString:NSLocalizedString(@"ok", nil)];
 }
 
 - (void)handleExamplesTap:(TableViewCellWithEntry*)cell {
     NSArray *examples = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:EXAMPLE_SCRIPTS_PATH error:nil];
-    NSString *message = [NSString stringWithFormat:@"%lu bundled examples installed in:\n%@", (unsigned long)examples.count, EXAMPLE_SCRIPTS_PATH];
-    [Util showAlertBoxWithOneOption:self title:@"Example Scripts" message:message buttonString:@"OK"];
+    NSString *message = [NSString stringWithFormat:NSLocalizedString(@"exampleScriptsMessage", nil), (unsigned long)examples.count, EXAMPLE_SCRIPTS_PATH];
+    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"exampleScripts", nil) message:message buttonString:NSLocalizedString(@"ok", nil)];
 }
 
 - (void)handleRegistryTap:(TableViewCellWithEntry*)cell {
     NSDictionary *registry = [NSDictionary dictionaryWithContentsOfFile:SCRIPT_REGISTRY_PATH];
-    NSString *version = registry[@"version"] ?: @"missing";
+    NSString *version = registry[@"version"] ?: NSLocalizedString(@"missing", nil);
     NSString *examplesPath = registry[@"examplesPath"] ?: EXAMPLE_SCRIPTS_PATH;
     NSArray *scripts = registry[@"scripts"] ?: @[];
-    NSString *message = [NSString stringWithFormat:@"Registry version: %@\nScripts: %lu\nExamples: %@", version, (unsigned long)scripts.count, examplesPath];
-    [Util showAlertBoxWithOneOption:self title:@"Script Registry" message:message buttonString:@"OK"];
+    NSString *message = [NSString stringWithFormat:NSLocalizedString(@"scriptRegistryMessage", nil), version, (unsigned long)scripts.count, examplesPath];
+    [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"scriptRegistry", nil) message:message buttonString:NSLocalizedString(@"ok", nil)];
 }
 
 - (void)handleTouchIndicatorWithEntryCellInstance:(TableViewCellWithEntry*)cell {
@@ -635,7 +597,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         
         cell.title.text = cellInfo[@"title"];
         cell.title.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
-        cell.iconView.image = ZXSettingsSymbol([self iconNameForCellTitle:cellInfo[@"title"]]);
+        cell.iconView.image = ZXSettingsSymbol(cellInfo[@"icon"] ?: @"gearshape");
         cell.iconView.tintColor = [UIColor systemBlueColor];
         cell.backgroundColor = [UIColor secondarySystemGroupedBackgroundColor];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
@@ -663,11 +625,14 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         cell.title.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
         cell.subTitle.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
         cell.subTitle.textColor = [UIColor secondaryLabelColor];
-        cell.iconView.image = ZXSettingsSymbol([self iconNameForCellTitle:cellInfo[@"title"]]);
+        cell.iconView.image = ZXSettingsSymbol(cellInfo[@"icon"] ?: @"gearshape");
         cell.iconView.tintColor = [UIColor systemBlueColor];
         cell.backgroundColor = [UIColor secondarySystemGroupedBackgroundColor];
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         cell.clickHandler = cellInfo[@"row_click_handler"];
+        if (cellInfo[@"trigger_key"]) {
+            objc_setAssociatedObject(cell, ZXTriggerKeyAssoc, cellInfo[@"trigger_key"], OBJC_ASSOCIATION_COPY_NONATOMIC);
+        }
         
         result = cell;
     }
