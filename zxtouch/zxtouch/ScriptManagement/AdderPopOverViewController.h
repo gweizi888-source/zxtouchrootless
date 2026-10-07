@@ -15,6 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)createScriptButtonClick:(id)sender;
 - (IBAction)importFileButtonClick:(id)sender;
 - (IBAction)importImageButtonClick:(id)sender;
+- (IBAction)importZipButtonClick:(id)sender;
 
 - (void)setFolder:(NSString*)path;
 - (void)setUpperLevelViewController:(ScriptListViewController*)vc;

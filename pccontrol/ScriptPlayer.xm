@@ -279,8 +279,13 @@ static NSString *ZXPythonModulePath(void)
             NSError *err = nil;
             [self playFromPythonFile:entryFilePath foregroundApp:foregroundApp err:&err];
         });
-        
     }
+    else
+    {
+        *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"-1;;Unable to run the script. Entry file must be a .py or .raw file.\r\n"}];
+        return -1;
+    }
+    return 0;
 }
 
 // play the script

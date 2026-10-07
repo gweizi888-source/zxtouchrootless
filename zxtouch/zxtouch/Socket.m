@@ -6,6 +6,7 @@
 //
 
 #import "Socket.h"
+#include <sys/time.h>
 
 
 @implementation Socket
@@ -49,6 +50,13 @@
 
 -(BOOL) isConnected {
     return socketHandle != 0;
+}
+
+-(void)setRecvTimeout:(int)seconds {
+    struct timeval timeout;
+    timeout.tv_sec = seconds;
+    timeout.tv_usec = 0;
+    setsockopt(socketHandle, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 }
 
 -(void) send: (NSString*)msg

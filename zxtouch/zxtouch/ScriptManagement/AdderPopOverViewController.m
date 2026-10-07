@@ -8,6 +8,7 @@
 #import "AdderPopOverViewController.h"
 #import "Util.h"
 #import <MobileCoreServices/MobileCoreServices.h>
+#import <zlib.h>
 
 @interface AdderPopOverViewController ()
 
@@ -17,6 +18,7 @@
 {
     NSString *currentFolder;
     ScriptListViewController *upperLevel;
+    BOOL pickingZip;
 }
 
 
@@ -26,7 +28,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.preferredContentSize = CGSizeMake(300, 200);
+    self.preferredContentSize = CGSizeMake(300, 250);
     // Do any additional setup after loading the view from its nib.
 }
 
@@ -209,16 +211,26 @@
     });
 }
 
-- (IBAction)importFileButtonClick:(id)sender {
+- (void)presentDocumentPickerForZip:(BOOL)zipOnly {
     if (!self->currentFolder) {
         [Util showAlertBoxWithOneOption:self title:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"createFolderPathNotSet", nil) buttonString:@"OK"];
         return;
     }
 
-    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[(NSString *)kUTTypeItem] inMode:UIDocumentPickerModeImport];
+    self->pickingZip = zipOnly;
+    NSArray *types = zipOnly ? @[@"public.zip-archive", @"com.pkware.zip-archive"] : @[(NSString *)kUTTypeItem];
+    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:types inMode:UIDocumentPickerModeImport];
     picker.delegate = self;
     picker.modalPresentationStyle = UIModalPresentationFormSheet;
     [self presentViewController:picker animated:YES completion:nil];
+}
+
+- (IBAction)importFileButtonClick:(id)sender {
+    [self presentDocumentPickerForZip:NO];
+}
+
+- (IBAction)importZipButtonClick:(id)sender {
+    [self presentDocumentPickerForZip:YES];
 }
 
 - (IBAction)importImageButtonClick:(id)sender {
@@ -240,6 +252,212 @@
     [self presentViewController:picker animated:YES completion:nil];
 }
 
+static uint16_t zipRead16(const uint8_t *bytes) {
+    return (uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8);
+}
+
+static uint32_t zipRead32(const uint8_t *bytes) {
+    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) | ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+}
+
+static NSError *zipError(NSString *message) {
+    return [NSError errorWithDomain:@"ZXTouchImport" code:2 userInfo:@{NSLocalizedDescriptionKey: message}];
+}
+
+static BOOL zipPathIsSafe(NSString *name) {
+    if (name.length == 0 || [name hasPrefix:@"/"] || [name hasPrefix:@"\\"]) {
+        return NO;
+    }
+    for (NSString *part in [name pathComponents]) {
+        if ([part isEqualToString:@".."]) {
+            return NO;
+        }
+    }
+    return YES;
+}
+
+static NSData *zipInflate(NSData *input, uint32_t expectedSize) {
+    if (expectedSize == 0) {
+        return [NSData data];
+    }
+    z_stream stream;
+    memset(&stream, 0, sizeof(stream));
+    if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) {
+        return nil;
+    }
+    NSMutableData *output = [NSMutableData dataWithLength:expectedSize];
+    stream.next_in = (Bytef *)input.bytes;
+    stream.avail_in = (uInt)input.length;
+    stream.next_out = output.mutableBytes;
+    stream.avail_out = expectedSize;
+    int status = inflate(&stream, Z_FINISH);
+    inflateEnd(&stream);
+    if (status != Z_STREAM_END) {
+        return nil;
+    }
+    return output;
+}
+
+- (BOOL)unzipData:(NSData *)data toDirectory:(NSString *)directory error:(NSError **)error {
+    const uint8_t *bytes = data.bytes;
+    NSUInteger length = data.length;
+    if (length < 22) {
+        if (error) *error = zipError(@"This zip file is empty or damaged.");
+        return NO;
+    }
+
+    NSInteger endOffset = NSNotFound;
+    NSUInteger scan = MIN(length, (NSUInteger)65557);
+    for (NSInteger index = (NSInteger)length - 22; index >= (NSInteger)length - (NSInteger)scan && index >= 0; index--) {
+        if (zipRead32(bytes + index) == 0x06054b50) {
+            endOffset = index;
+            break;
+        }
+    }
+    if (endOffset == NSNotFound) {
+        if (error) *error = zipError(@"This file is not a zip archive.");
+        return NO;
+    }
+
+    uint16_t entryCount = zipRead16(bytes + endOffset + 10);
+    uint32_t directoryOffset = zipRead32(bytes + endOffset + 16);
+    if (directoryOffset >= length) {
+        if (error) *error = zipError(@"This zip file is damaged.");
+        return NO;
+    }
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:nil];
+    NSUInteger offset = directoryOffset;
+    BOOL extracted = NO;
+
+    for (uint16_t entry = 0; entry < entryCount; entry++) {
+        if (offset + 46 > length || zipRead32(bytes + offset) != 0x02014b50) {
+            if (error) *error = zipError(@"This zip file is damaged.");
+            return NO;
+        }
+        uint16_t flags = zipRead16(bytes + offset + 8);
+        uint16_t method = zipRead16(bytes + offset + 10);
+        uint32_t compressedSize = zipRead32(bytes + offset + 20);
+        uint32_t uncompressedSize = zipRead32(bytes + offset + 24);
+        uint16_t nameLength = zipRead16(bytes + offset + 28);
+        uint16_t extraLength = zipRead16(bytes + offset + 30);
+        uint16_t commentLength = zipRead16(bytes + offset + 32);
+        uint32_t localOffset = zipRead32(bytes + offset + 42);
+        if (offset + 46 + nameLength > length) {
+            if (error) *error = zipError(@"This zip file is damaged.");
+            return NO;
+        }
+        NSString *name = [[NSString alloc] initWithBytes:bytes + offset + 46 length:nameLength encoding:NSUTF8StringEncoding];
+        if (!name) {
+            name = [[NSString alloc] initWithBytes:bytes + offset + 46 length:nameLength encoding:NSASCIIStringEncoding];
+        }
+        offset += 46 + nameLength + extraLength + commentLength;
+
+        if (!zipPathIsSafe(name) || [name containsString:@"__MACOSX"] || compressedSize == 0xFFFFFFFF || uncompressedSize == 0xFFFFFFFF) {
+            continue;
+        }
+        if ((flags & 1) != 0) {
+            if (error) *error = zipError(@"Encrypted zip files are not supported.");
+            return NO;
+        }
+        if (localOffset + 30 > length) {
+            if (error) *error = zipError(@"This zip file is damaged.");
+            return NO;
+        }
+        uint16_t localNameLength = zipRead16(bytes + localOffset + 26);
+        uint16_t localExtraLength = zipRead16(bytes + localOffset + 28);
+        NSUInteger dataOffset = localOffset + 30 + localNameLength + localExtraLength;
+        if (dataOffset + compressedSize > length) {
+            if (error) *error = zipError(@"This zip file is damaged.");
+            return NO;
+        }
+
+        BOOL isDirectory = [name hasSuffix:@"/"] || [name hasSuffix:@"\\"];
+        NSString *destination = [directory stringByAppendingPathComponent:name];
+        if (isDirectory) {
+            [fileManager createDirectoryAtPath:destination withIntermediateDirectories:YES attributes:nil error:nil];
+            continue;
+        }
+        [fileManager createDirectoryAtPath:[destination stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
+
+        NSData *compressed = [NSData dataWithBytes:bytes + dataOffset length:compressedSize];
+        NSData *contents = nil;
+        if (method == 0) {
+            contents = compressed;
+        } else if (method == 8) {
+            contents = zipInflate(compressed, uncompressedSize);
+        } else {
+            if (error) *error = zipError(@"This zip uses a compression method ZXTouch cannot read.");
+            return NO;
+        }
+        if (!contents) {
+            if (error) *error = zipError(@"Could not decompress a file in the zip.");
+            return NO;
+        }
+        if (![contents writeToFile:destination options:NSDataWritingAtomic error:error]) {
+            return NO;
+        }
+        extracted = YES;
+    }
+
+    if (!extracted) {
+        if (error) *error = zipError(@"The zip does not contain any files.");
+        return NO;
+    }
+    return YES;
+}
+
+- (NSString *)importZipAtURL:(NSURL *)url error:(NSError **)error {
+    NSData *data = [NSData dataWithContentsOfURL:url options:0 error:error];
+    if (!data) {
+        return nil;
+    }
+
+    NSString *tempDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]];
+    if (![self unzipData:data toDirectory:tempDirectory error:error]) {
+        [[NSFileManager defaultManager] removeItemAtPath:tempDirectory error:nil];
+        return nil;
+    }
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    [fileManager removeItemAtPath:[tempDirectory stringByAppendingPathComponent:@"__MACOSX"] error:nil];
+    NSMutableArray *items = [NSMutableArray array];
+    for (NSString *name in [fileManager contentsOfDirectoryAtPath:tempDirectory error:nil]) {
+        if (![name hasPrefix:@"."]) {
+            [items addObject:name];
+        }
+    }
+
+    NSString *source = tempDirectory;
+    NSString *folderName = [[url.lastPathComponent stringByDeletingPathExtension] length] ? [url.lastPathComponent stringByDeletingPathExtension] : @"Imported Script";
+    if (items.count == 1) {
+        NSString *onlyPath = [tempDirectory stringByAppendingPathComponent:items[0]];
+        BOOL isDirectory = NO;
+        if ([fileManager fileExistsAtPath:onlyPath isDirectory:&isDirectory] && isDirectory) {
+            source = onlyPath;
+            folderName = items[0];
+        }
+    }
+    if ([source isEqualToString:tempDirectory] &&
+        [fileManager fileExistsAtPath:[tempDirectory stringByAppendingPathComponent:@"info.plist"]] &&
+        ![[folderName pathExtension].lowercaseString isEqualToString:@"bdl"]) {
+        folderName = [folderName stringByAppendingPathExtension:@"bdl"];
+    }
+
+    NSString *destination = [self availableDestinationPathForFileName:folderName];
+    NSError *moveError = nil;
+    if (![fileManager moveItemAtPath:source toPath:destination error:&moveError]) {
+        [fileManager removeItemAtPath:tempDirectory error:nil];
+        if (error) *error = moveError;
+        return nil;
+    }
+    if (![source isEqualToString:tempDirectory]) {
+        [fileManager removeItemAtPath:tempDirectory error:nil];
+    }
+    return destination;
+}
+
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
     NSURL *url = urls.firstObject;
     if (!url) {
@@ -247,9 +465,19 @@
     }
 
     BOOL didAccess = [url startAccessingSecurityScopedResource];
-    NSString *destinationPath = [self availableDestinationPathForFileName:url.lastPathComponent];
+    BOOL zipOnly = self->pickingZip;
+    self->pickingZip = NO;
+    NSString *extension = url.pathExtension.lowercaseString;
     NSError *err = nil;
-    [[NSFileManager defaultManager] copyItemAtURL:url toURL:[NSURL fileURLWithPath:destinationPath] error:&err];
+    NSString *destinationPath = nil;
+    if (zipOnly && ![extension isEqualToString:@"zip"]) {
+        err = zipError(@"Please choose a .zip file.");
+    } else if ([extension isEqualToString:@"zip"]) {
+        destinationPath = [self importZipAtURL:url error:&err];
+    } else {
+        destinationPath = [self availableDestinationPathForFileName:url.lastPathComponent];
+        [[NSFileManager defaultManager] copyItemAtURL:url toURL:[NSURL fileURLWithPath:destinationPath] error:&err];
+    }
     if (didAccess) {
         [url stopAccessingSecurityScopedResource];
     }
