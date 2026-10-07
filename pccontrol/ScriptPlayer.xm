@@ -109,6 +109,7 @@ static NSString *ZXPythonModulePath(void)
     pid_t pythonProcessGroup;
     Boolean switchAppBeforePlaying;
     int _completedRuns;
+    CFRunLoopRef waitingRunLoop;
 }
 
 - (BOOL)isPlaying {
@@ -474,7 +475,15 @@ static NSString *ZXPythonModulePath(void)
 
         currentScriptType = 0;
 
+        waitingRunLoop = CFRunLoopGetCurrent();
         CFRunLoopRun();
+        waitingRunLoop = NULL;
+        // Returning here means either the next run already started, or the user
+        // asked to stop after this run while we were waiting for the interval.
+        if (currentScriptType == 0) {
+            playHasStoppedCallBack();
+            [self clear];
+        }
     }
     else
     {
@@ -505,6 +514,25 @@ static NSString *ZXPythonModulePath(void)
         [replayTimer invalidate];
 
     replayTimer = nil;
+    waitingRunLoop = NULL;
+}
+
+- (void)stopAfterCurrentRun:(NSError**)error {
+    if (!isPlaying) {
+        if (error) {
+            *error = [NSError errorWithDomain:@"com.zjx.zxtouchsp" code:999 userInfo:@{NSLocalizedDescriptionKey:@"当前没有正在运行的脚本。"}];
+        }
+        return;
+    }
+    // Let the current pass finish, then do not start another repeat.
+    repeatTime = 0;
+    if (currentScriptType == 0 && waitingRunLoop) {
+        if (replayTimer) {
+            [replayTimer invalidate];
+            replayTimer = nil;
+        }
+        CFRunLoopStop(waitingRunLoop);
+    }
 }
 
 - (void)forceStop:(NSError**)error {
@@ -517,7 +545,9 @@ static NSString *ZXPythonModulePath(void)
 
     if (currentScriptType == 0)
     {
+        CFRunLoopRef loop = waitingRunLoop;
         [self clear];
+        if (loop) CFRunLoopStop(loop);
     }
     else if (currentScriptType == 1)
     {

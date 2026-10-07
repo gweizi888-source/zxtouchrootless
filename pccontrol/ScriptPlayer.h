@@ -10,6 +10,7 @@
 - (void)setSpeed:(float)sp;
 - (void)setPath:(NSString*)path;
 - (void)forceStop:(NSError**)error;
+- (void)stopAfterCurrentRun:(NSError**)error;
 - (void)setSwitchApp:(BOOL)value;
 
 - (id)initWithPath:(NSString*)path;

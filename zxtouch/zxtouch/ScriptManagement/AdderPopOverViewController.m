@@ -458,7 +458,9 @@ static void ZXOpenFilzaAtPath(NSString *path) {
 
 - (void)showZipBrowser {
     NSString *start = @"/var/mobile";
-    if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Downloads"]) {
+    if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Media"]) {
+        start = @"/var/mobile/Media";
+    } else if ([[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/Downloads"]) {
         start = @"/var/mobile/Downloads";
     }
     ZXZipFolderController *browser = [[ZXZipFolderController alloc] initWithStyle:UITableViewStyleGrouped];

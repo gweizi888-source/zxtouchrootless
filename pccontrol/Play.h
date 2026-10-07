@@ -8,6 +8,7 @@ int playScriptWithSettings(UInt8* path, int repeatTime, float playSpeed, float i
 void playFromRawFile(NSString* filePath, NSString* foregroundApp, NSError **err);
 void playFromPythonFile(NSString* filePath, NSString* foregroundApp, NSError **err);
 void stopScriptPlaying(NSError **error);
+void stopScriptAfterCurrentRun(NSError **error);
 BOOL isScriptPlaying();
 void playHasStoppedCallBack();
 void initScriptPlayer();

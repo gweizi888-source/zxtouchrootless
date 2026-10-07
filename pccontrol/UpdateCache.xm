@@ -56,5 +56,12 @@ void updateCacheFromRawData(UInt8* eventData, NSError **error)
             showFloat = [config[@"floating_button_enabled"] boolValue];
         }
         setFloatingButtonEnabled(showFloat);
+        CGFloat opacity = 0.55;
+        id alpha = config[@"floating_button_alpha"];
+        if ([alpha isKindOfClass:[NSNumber class]]) {
+            CGFloat value = [alpha doubleValue];
+            if (value >= 0.15 && value <= 1.0) opacity = value;
+        }
+        setFloatingButtonOpacity(opacity);
     }
 }

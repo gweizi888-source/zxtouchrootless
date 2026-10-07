@@ -342,19 +342,19 @@
         NSLog(@"delete button clicked for index path: %@", indexPath);
         // delete files in NSFileManager
         
-        UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Alert"
-                                       message:@"Are you sure you want to remove this file (folder)?"
+        UIAlertController* alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"deleteConfirmTitle", nil)
+                                       message:NSLocalizedString(@"deleteConfirmMessage", nil)
                                        preferredStyle:UIAlertControllerStyleAlert];
          
-        UIAlertAction* ok = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault
+        UIAlertAction* ok = [UIAlertAction actionWithTitle:NSLocalizedString(@"ok", nil) style:UIAlertActionStyleDestructive
            handler:^(UIAlertAction * action) {NSError *err = nil;
             [[NSFileManager defaultManager] removeItemAtPath:self->scriptList[indexPath.row] error:&err];
 
             if (err)
             {
                 NSLog(@"Error while removing file. Error: %@", err);
-                UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Error"
-                                               message:[NSString stringWithFormat:@"Error while deleting this file. Error message: %@", err]
+                UIAlertController* alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"error", nil)
+                                               message:[NSString stringWithFormat:NSLocalizedString(@"deleteFailed", nil), err.localizedDescription]
                                                preferredStyle:UIAlertControllerStyleAlert];
                  
                 UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"ok", nil) style:UIAlertActionStyleDefault
@@ -367,7 +367,7 @@
             [self->scriptList removeObjectAtIndex:indexPath.row];
             // reload table view
             [self._scriptListTableView reloadData];}];
-        UIAlertAction* cancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault
+        UIAlertAction* cancel = [UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleDefault
            handler:nil];
         
         [alert addAction:cancel];

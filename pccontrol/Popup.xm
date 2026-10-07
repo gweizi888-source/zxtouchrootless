@@ -132,12 +132,14 @@ static void styleIconButton(UIButton *button, NSString *symbolName, UIColor *col
 
         [cv addSubview:[self makeSepAt:CGRectMake(0,46,pw,1)]];
 
-        // REC / STOP buttons
-        CGFloat btnW = (pw - 24) / 2;
-        UIButton *recBtn = makeBtn(@"⏺  REC", [UIColor systemRedColor]);
-        recBtn.frame = CGRectMake(8, 54, btnW, BTN_H);
-        [recBtn setTitle:@"录制" forState:UIControlStateNormal];
-        [recBtn setImage:panelSymbol(@"record.circle.fill") forState:UIControlStateNormal];
+        CGFloat gap = 6;
+        CGFloat side = 8;
+        CGFloat oneW = (pw - side * 2 - gap * 2) / 3.0;
+        UIButton *recBtn = makeBtn(@"录制", [UIColor systemRedColor]);
+        recBtn.frame = CGRectMake(side, 54, oneW, BTN_H);
+        recBtn.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+        recBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
+        recBtn.titleLabel.minimumScaleFactor = 0.7;
         recBtn.tintColor = [UIColor systemRedColor];
         recBtn.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.12];
         [recBtn addAction:[UIAction actionWithTitle:@"" image:nil identifier:nil handler:^(__kindof UIAction *a) {
@@ -145,10 +147,24 @@ static void styleIconButton(UIButton *button, NSString *symbolName, UIColor *col
         }] forControlEvents:UIControlEventTouchUpInside];
         [cv addSubview:recBtn];
 
-        UIButton *stopBtn = makeBtn(@"停止", [UIColor secondaryLabelColor]);
-        stopBtn.frame = CGRectMake(pw/2+4, 54, btnW, BTN_H);
-        [stopBtn setImage:panelSymbol(@"stop.fill") forState:UIControlStateNormal];
-        stopBtn.tintColor = [UIColor secondaryLabelColor];
+        UIButton *finishBtn = makeBtn(@"本次结束", [UIColor systemOrangeColor]);
+        finishBtn.frame = CGRectMake(side + oneW + gap, 54, oneW, BTN_H);
+        finishBtn.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+        finishBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
+        finishBtn.titleLabel.minimumScaleFactor = 0.6;
+        finishBtn.tintColor = [UIColor systemOrangeColor];
+        finishBtn.backgroundColor = [UIColor.systemOrangeColor colorWithAlphaComponent:0.12];
+        [finishBtn addAction:[UIAction actionWithTitle:@"" image:nil identifier:nil handler:^(__kindof UIAction *a) {
+            [self stopAfterCurrent];
+        }] forControlEvents:UIControlEventTouchUpInside];
+        [cv addSubview:finishBtn];
+
+        UIButton *stopBtn = makeBtn(@"立即停止", [UIColor systemRedColor]);
+        stopBtn.frame = CGRectMake(side + (oneW + gap) * 2, 54, oneW, BTN_H);
+        stopBtn.titleLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+        stopBtn.titleLabel.adjustsFontSizeToFitWidth = YES;
+        stopBtn.titleLabel.minimumScaleFactor = 0.6;
+        stopBtn.tintColor = [UIColor systemRedColor];
         [stopBtn addAction:[UIAction actionWithTitle:@"" image:nil identifier:nil handler:^(__kindof UIAction *a) {
             [self stopAction];
         }] forControlEvents:UIControlEventTouchUpInside];
@@ -382,6 +398,19 @@ void applyPanelDarkMode(BOOL dark) {
         NSError *err = nil;
         stopScriptPlaying(&err);
         // Don't show alert here — volume button handler shows it
+    });
+}
+
+- (void) stopAfterCurrent {
+    if (!isScriptPlaying()) {
+        showAlertBox(@"ZXTouch", @"当前没有正在运行的脚本。", 1);
+        return;
+    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        NSError *err = nil;
+        stopScriptAfterCurrentRun(&err);
+        if (err) showAlertBox(@"ZXTouch", err.localizedDescription, 1);
+        else showAlertBox(@"ZXTouch", @"将在本次运行结束后停止，不会再重复。", 1);
     });
 }
 

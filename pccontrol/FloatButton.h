@@ -10,6 +10,7 @@
 @end
 
 void setFloatingButtonEnabled(BOOL enabled);
+void setFloatingButtonOpacity(CGFloat opacity);
 
 extern FloatButton *floatButton;
 

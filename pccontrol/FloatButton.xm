@@ -1,6 +1,7 @@
 #import "FloatButton.h"
 #import "Popup.h"
 #import "Common.h"
+#import <objc/message.h>
 
 static const CGFloat kFloatButtonSize = 56;
 
@@ -17,6 +18,8 @@ extern PopupWindow *popupWindow;
     BOOL _hasRatio;
     CGFloat _ratioX;
     CGFloat _ratioY;
+    CGFloat _opacity;
+    UIImageView *_iconView;
 }
 
 - (id)init {
@@ -24,6 +27,7 @@ extern PopupWindow *popupWindow;
     if (self) {
         _enabled = NO;
         _hasRatio = NO;
+        _opacity = 0.55;
         [self loadSavedPosition];
         dispatch_async(dispatch_get_main_queue(), ^{
             [self buildWindow];
@@ -47,6 +51,24 @@ extern PopupWindow *popupWindow;
             _hasRatio = YES;
         }
     }
+    id alpha = config[@"floating_button_alpha"];
+    if ([alpha isKindOfClass:[NSNumber class]]) {
+        CGFloat value = [alpha doubleValue];
+        if (value >= 0.15 && value <= 1.0) _opacity = value;
+    }
+}
+
+- (UIImage *)floatingIcon {
+    SEL iconSelector = NSSelectorFromString(@"_applicationIconImageForBundleIdentifier:format:scale:");
+    if ([UIImage respondsToSelector:iconSelector]) {
+        UIImage *(*iconImage)(id, SEL, NSString *, NSInteger, CGFloat) = (UIImage *(*)(id, SEL, NSString *, NSInteger, CGFloat))objc_msgSend;
+        NSArray *bundleIds = @[@"com.zjx.zxtouch", @"com.zjx.ioscontrol"];
+        for (NSString *bundleId in bundleIds) {
+            UIImage *icon = iconImage([UIImage class], iconSelector, bundleId, 2, [UIScreen mainScreen].scale);
+            if (icon) return icon;
+        }
+    }
+    return [UIImage imageWithContentsOfFile:@"/var/mobile/Library/ZXTouch/float-icon.png"];
 }
 
 - (CGRect)frameForCurrentScreen {
@@ -125,15 +147,17 @@ extern PopupWindow *popupWindow;
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     button.frame = root.view.bounds;
     button.autoresizingMask = UIViewAutoresizingNone;
-    button.backgroundColor = [UIColor colorWithRed:0.18 green:0.45 blue:0.95 alpha:0.94];
-    button.layer.cornerRadius = kFloatButtonSize / 2.0;
-    button.layer.masksToBounds = YES;
-    button.layer.borderWidth = 1;
-    button.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.9].CGColor;
-    [button setTitle:@"脚本" forState:UIControlStateNormal];
-    [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    button.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+    button.backgroundColor = [UIColor clearColor];
     [button addTarget:self action:@selector(buttonTapped) forControlEvents:UIControlEventTouchUpInside];
+
+    _iconView = [[UIImageView alloc] initWithFrame:button.bounds];
+    _iconView.image = [self floatingIcon];
+    _iconView.contentMode = UIViewContentModeScaleAspectFill;
+    _iconView.layer.cornerRadius = kFloatButtonSize / 2.0;
+    _iconView.layer.masksToBounds = YES;
+    _iconView.alpha = _opacity;
+    _iconView.userInteractionEnabled = NO;
+    [button addSubview:_iconView];
 
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [button addGestureRecognizer:pan];
@@ -205,6 +229,11 @@ extern PopupWindow *popupWindow;
             subview.frame = _window.rootViewController.view.bounds;
             subview.layer.cornerRadius = frame.size.width / 2.0;
         }
+        if (_iconView) {
+            _iconView.frame = _iconView.superview.bounds;
+            _iconView.layer.cornerRadius = frame.size.width / 2.0;
+            _iconView.alpha = _opacity;
+        }
         _window.hidden = NO;
     } else {
         _window.hidden = YES;
@@ -219,6 +248,17 @@ extern PopupWindow *popupWindow;
     if (!_built) return;
     if (!_window) [self buildWindow];
     [self applyVisibility];
+}
+
+- (void)setOpacity:(CGFloat)opacity {
+    if (opacity < 0.15) opacity = 0.15;
+    if (opacity > 1.0) opacity = 1.0;
+    _opacity = opacity;
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{ [self setOpacity:opacity]; });
+        return;
+    }
+    _iconView.alpha = _opacity;
 }
 
 - (void)setEnabled:(BOOL)enabled {
@@ -238,4 +278,9 @@ extern PopupWindow *popupWindow;
 void setFloatingButtonEnabled(BOOL enabled) {
     if (!floatButton) return;
     [floatButton setEnabled:enabled];
+}
+
+void setFloatingButtonOpacity(CGFloat opacity) {
+    if (!floatButton) return;
+    [floatButton setOpacity:opacity];
 }

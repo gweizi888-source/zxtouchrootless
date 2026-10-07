@@ -221,6 +221,13 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     BOOL floatingButton = YES;
     if ([configManager getValueFromKey:@"floating_button_enabled"])
         floatingButton = [[configManager getValueFromKey:@"floating_button_enabled"] boolValue];
+    CGFloat floatingOpacity = 0.55;
+    id storedOpacity = [configManager getValueFromKey:@"floating_button_alpha"];
+    if ([storedOpacity isKindOfClass:[NSNumber class]]) {
+        floatingOpacity = [storedOpacity doubleValue];
+        if (floatingOpacity < 0.15 || floatingOpacity > 1.0) floatingOpacity = 0.55;
+    }
+    NSString *opacityText = [NSString stringWithFormat:@"%d%%", (int)llround(floatingOpacity * 100.0)];
 
     sections = @[NSLocalizedString(@"remoteManagement", nil), NSLocalizedString(@"control", nil), NSLocalizedString(@"automation", nil), NSLocalizedString(@"script", nil), NSLocalizedString(@"appearance", nil), NSLocalizedString(@"about", nil)];
     cellsForEachSection = @[
@@ -228,6 +235,7 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
         @[
             @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"touchIndicator", nil), @"icon": @"hand.tap", @"secondary_title": @"", @"row_click_handler": NSStringFromSelector(@selector(handleTouchIndicatorWithEntryCellInstance:))},
             @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"floatingButton", nil), @"icon": @"circle.circle", @"switch_click_handler": NSStringFromSelector(@selector(handleFloatingButtonToggle:)), @"switch_init_status": @(floatingButton)},
+            @{@"type": @(SETTING_CELL_ENTRY), @"title": NSLocalizedString(@"floatingButtonOpacity", nil), @"icon": @"circle.lefthalf.filled", @"secondary_title": opacityText, @"row_click_handler": NSStringFromSelector(@selector(handleFloatingOpacityTap:))},
             @{@"type": @(SETTING_CELL_SWITCH), @"title": NSLocalizedString(@"doubleClickShowPopup", nil), @"icon": @"speaker.wave.2", @"switch_click_handler": NSStringFromSelector(@selector(handlePopupWindowDoubleClick:)), @"switch_init_status": @(doubleClickPopup)}
         ],
         @[
@@ -264,6 +272,34 @@ static UIImage *ZXSettingsSymbol(NSString *name) {
     [configManager updateKey:@"floating_button_enabled" forValue:@([s isOn])];
     [configManager save];
     [self notifyTweakCache:@"904"];
+}
+
+- (void)handleFloatingOpacityTap:(TableViewCellWithEntry *)cell {
+    CGFloat current = 0.55;
+    id stored = [configManager getValueFromKey:@"floating_button_alpha"];
+    if ([stored isKindOfClass:[NSNumber class]]) {
+        current = [stored doubleValue];
+        if (current < 0.2 || current > 1.0) current = 0.55;
+    }
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"floatingButtonOpacity", nil)
+                                                                   message:@"拖动后点保存"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIViewController *content = [[UIViewController alloc] init];
+    content.preferredContentSize = CGSizeMake(270, 44);
+    UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(8, 6, 254, 32)];
+    slider.minimumValue = 0.2f;
+    slider.maximumValue = 1.0f;
+    slider.value = current;
+    [content.view addSubview:slider];
+    [alert setValue:content forKey:@"contentViewController"];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"save", nil) style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        [configManager updateKey:@"floating_button_alpha" forValue:@(slider.value)];
+        [configManager save];
+        [self notifyTweakCache:@"904"];
+        [self reloadSettingsModel];
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)handleSwitchAppBeforePlaying:(UISwitch*)s {

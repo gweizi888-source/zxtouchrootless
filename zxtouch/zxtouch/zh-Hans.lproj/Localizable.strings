@@ -73,6 +73,10 @@
 "dashboardURL" = "控制台地址";
 "dashboardURLHint" = "点按查看并复制";
 "floatingButton" = "悬浮按钮";
+"floatingButtonOpacity" = "悬浮按钮透明度";
+"deleteConfirmTitle" = "删除";
+"deleteConfirmMessage" = "确定要删除这个文件或文件夹吗？";
+"deleteFailed" = "删除失败：%@";
 "volumeUp" = "音量加";
 "volumeDown" = "音量减";
 "homeButton" = "主屏幕键";
@@ -90,7 +94,7 @@
 "exampleScripts" = "示例脚本";
 "scriptRegistry" = "脚本清单";
 "darkMode" = "深色模式";
-"aboutZXTouch" = "关于 ZXTouch 1.0.6";
+"aboutZXTouch" = "关于 ZXTouch 1.0.7";
 "aboutZXTouchDetail" = "点按查看";
 "triggerCurrent" = "当前：%@";
 "disableTrigger" = "关闭此按键";
@@ -105,7 +109,7 @@
 "remoteDashboard" = "远程控制台";
 "remoteDashboardMessage" = "请在同一 Wi-Fi 下的设备打开：\n\n%@";
 "copiedClipboard" = "%@\n\n已复制到剪贴板。";
-"creditsMessage" = "版本 1.0.6\n适用于 iOS 15–17。\nhttps://github.com/Epic0001/zxtouchrootless";
+"creditsMessage" = "版本 1.0.7\n适用于 iOS 15–17。\nhttps://github.com/Epic0001/zxtouchrootless";
 "exampleScriptsMessage" = "已安装 %lu 个示例脚本：\n%@";
 "scriptRegistryMessage" = "清单版本：%@\n脚本数量：%lu\n示例路径：%@";
 "missing" = "缺失";
