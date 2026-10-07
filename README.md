@@ -144,6 +144,8 @@ Open Settings, then Automation, in the app to assign actions to button click pat
 
 ## Documentation (Python)
 
+中文对接说明，包括坐标和文字扫描：[docs/python.md](docs/python.md)。
+
 ### Installation
 
 On an iOS device, the ZXTouch Python module installs with the `.deb`.

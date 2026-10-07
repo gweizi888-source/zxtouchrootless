@@ -67,7 +67,7 @@ Record touch events and playback
 
 ## Documentation (Python)
 
-请看查看英文文档
+手机脚本怎么连接、怎么扫描文字，看 [docs/python.md](docs/python.md)。英文接口列表在 [README.md](README.md)。
 
 
 
